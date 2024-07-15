@@ -34,6 +34,8 @@ def get_uart_frame_raw(serial_port: Serial, lighthouse_uart_frame: LighthouseUar
     # Sync frame
     if reading == 0xffffffffffffffffffffffff:
         lighthouse_uart_frame.is_sync_frame = True
+    else:
+        lighthouse_uart_frame.is_sync_frame = False
 
     # Unpack
     lighthouse_uart_frame = LighthouseUartFrame()
