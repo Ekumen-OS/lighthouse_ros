@@ -40,7 +40,8 @@ def get_uart_frame_raw(serial_port: Serial, lighthouse_uart_frame: LighthouseUar
 
     lighthouse_uart_frame.data.sensor = reading[0] & 0x03
     lighthouse_uart_frame.data.channel_found = (reading[0] & 0x80) == 0
-    lighthouse_uart_frame.data.channel = (reading[0] >> 3) & 0x0f
+    # lighthouse_uart_frame.data.channel = (reading[0] >> 3) & 0x0f
+    lighthouse_uart_frame.data.channel = 0  # Hardcode to channel 0 in our case
     lighthouse_uart_frame.data.slow_bit = (reading[0] >> 2) & 0x01
     lighthouse_uart_frame.data.width = reading[1:2]
     lighthouse_uart_frame.data.offset = reading[3:6]
@@ -86,8 +87,10 @@ class LighthouseCore:
         self.core_task(serial_port)
 
     def core_task(self, serial_port: Serial):
+        # TODO: This is inside the "while true" in the firmware, but sync frames are sent only once for v2 so it doesn't make sense?
+        wait_for_sync(serial_port)
+
         while(True):
-            wait_for_sync(serial_port)
             previous_was_sync_frame = False
 
             # Start the data aquisition
@@ -101,6 +104,8 @@ class LighthouseCore:
                 elif not lighthouse_uart_frame.is_sync_frame:
                     print("process")
                     self.process_frames(lighthouse_uart_frame)
+
+                previous_was_sync_frame = lighthouse_uart_frame.is_sync_frame
 
     def process_frames(self, frame: LighthouseUartFrame):
         base_station = int()
