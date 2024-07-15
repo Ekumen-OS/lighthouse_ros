@@ -26,43 +26,35 @@ class LighthouseUartFrame:
         self.is_sync_frame = False
 
 
-def get_uart_frame_raw(serial_port: Serial, ligthouse_uart_frame: LighthouseUartFrame) -> bool:
+def get_uart_frame_raw(serial_port: Serial, lighthouse_uart_frame: LighthouseUartFrame) -> bool:
     reading = serial_port.read(UART_FRAME_LENGTH)
 
-    ligthouse_uart_frame = LighthouseUartFrame() # Reset data structure
+    lighthouse_uart_frame = LighthouseUartFrame() # Reset data structure
 
-    is_padding_zero = False
+    # Sync frame
+    if reading == 0xffffffffffffffffffffffff:
+        lighthouse_uart_frame.is_sync_frame = True
 
     # Unpack
-    ligthouse_uart_frame = LighthouseUartFrame()
-    ligthouse_uart_frame.data.timestamp = struct.unpack("<I", reading[9:] + b'\x00')[0]
-    ligthouse_uart_frame.data.beam_data = struct.unpack("<I", reading[6:9] + b'\x00')[0]
-    offset_6 = struct.unpack("<I", reading[3:6] + b'\x00')[0]
-    first_word = struct.unpack("<I", reading[:3] + b'\x00')[0]
-    # Sync frame
-    if offset_6 == 0xffffff:
-        ligthouse_uart_frame.is_sync_frame = True
+    lighthouse_uart_frame = LighthouseUartFrame()
+
+    lighthouse_uart_frame.data.sensor = reading[0] & 0x03
+    lighthouse_uart_frame.data.channel_found = (reading[0] & 0x80) == 0
+    lighthouse_uart_frame.data.channel = (reading[0] >> 3) & 0x0f
+    lighthouse_uart_frame.data.slow_bit = (reading[0] >> 2) & 0x01
+    lighthouse_uart_frame.data.width = reading[1:2]
+    lighthouse_uart_frame.data.offset = reading[3:6]
+    lighthouse_uart_frame.data.beam_data = reading[6:9]
+    lighthouse_uart_frame.data.timestamp = reading[9:11]
 
     # Offset is expressed in a 6 MHz clock, while the timestamp uses a 24 MHz clock.
     # update offset to a 24 MHz clock
-    ligthouse_uart_frame.data.offset = offset_6 * 4
+    lighthouse_uart_frame.data.offset *= 4
 
-    ligthouse_uart_frame.data.sensor = first_word & 0x03
-    ligthouse_uart_frame.data.width = (first_word >> 8) & 0xffff
-
-    nPoly_ok = ((first_word >> 7) & 0x01) == 0
-    if nPoly_ok:
-        identity = (first_word >> 2) & 0x1f
-        ligthouse_uart_frame.data.channel = identity >> 1
-        ligthouse_uart_frame.data.slow_bit = identity & 1
-    else:
-        ligthouse_uart_frame.data.channel = None
-        ligthouse_uart_frame.data.slow_bit = None
-
-    # TODO: Double check if this is copy/pasteable
+    is_padding_zero = False
     is_padding_zero = (((reading[5] | reading[8]) & 0xfe) == 0)
 
-    return is_padding_zero or ligthouse_uart_frame.is_sync_frame
+    return is_padding_zero or lighthouse_uart_frame.is_sync_frame
 
 def wait_for_sync(src: Serial):
     # Wait for sync
@@ -99,14 +91,16 @@ class LighthouseCore:
             previous_was_sync_frame = False
 
             # Start the data aquisition
-            ligthouse_uart_frame = LighthouseUartFrame()
-            while get_uart_frame_raw(serial_port, ligthouse_uart_frame):
+            lighthouse_uart_frame = LighthouseUartFrame()
+            while get_uart_frame_raw(serial_port, lighthouse_uart_frame):
                 # Reset angles
-                if ligthouse_uart_frame.is_sync_frame and previous_was_sync_frame:
+                if lighthouse_uart_frame.is_sync_frame and previous_was_sync_frame:
+                    print ("clear")
                     self.pulse_processor.pulse_processor_clear()
 
-                elif not ligthouse_uart_frame.is_sync_frame:
-                    self.process_frames(ligthouse_uart_frame)
+                elif not lighthouse_uart_frame.is_sync_frame:
+                    print("process")
+                    self.process_frames(lighthouse_uart_frame)
 
     def process_frames(self, frame: LighthouseUartFrame):
         base_station = int()
