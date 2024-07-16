@@ -45,10 +45,10 @@ def get_uart_frame_raw(serial_port: Serial, lighthouse_uart_frame: LighthouseUar
     # lighthouse_uart_frame.data.channel = (reading[0] >> 3) & 0x0f
     lighthouse_uart_frame.data.channel = 0  # Hardcode to channel 0 in our case
     lighthouse_uart_frame.data.slow_bit = (reading[0] >> 2) & 0x01
-    lighthouse_uart_frame.data.width = reading[1:2]
-    lighthouse_uart_frame.data.offset = reading[3:6]
-    lighthouse_uart_frame.data.beam_data = reading[6:9]
-    lighthouse_uart_frame.data.timestamp = reading[9:11]
+    lighthouse_uart_frame.data.width = reading[1:3]
+    lighthouse_uart_frame.data.offset = reading[3:7]
+    lighthouse_uart_frame.data.beam_data = reading[6:10]
+    lighthouse_uart_frame.data.timestamp = reading[9:12]
 
     # Offset is expressed in a 6 MHz clock, while the timestamp uses a 24 MHz clock.
     # update offset to a 24 MHz clock
