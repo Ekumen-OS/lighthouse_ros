@@ -26,7 +26,7 @@ class LighthouseUartFrame:
         self.is_sync_frame = False
 
 
-def get_uart_frame_raw(serial_port: Serial, lighthouse_uart_frame: LighthouseUartFrame) -> bool:
+def get_uart_frame_raw(serial_port: Serial) -> tuple:
     reading = serial_port.read(UART_FRAME_LENGTH)
 
     lighthouse_uart_frame = LighthouseUartFrame() # Reset data structure
@@ -57,7 +57,7 @@ def get_uart_frame_raw(serial_port: Serial, lighthouse_uart_frame: LighthouseUar
     is_padding_zero = False
     is_padding_zero = (((reading[5] | reading[8]) & 0xfe) == 0)
 
-    return is_padding_zero or lighthouse_uart_frame.is_sync_frame
+    return (is_padding_zero or lighthouse_uart_frame.is_sync_frame, lighthouse_uart_frame)
 
 def wait_for_sync(src: Serial):
     # Wait for sync
@@ -96,8 +96,9 @@ class LighthouseCore:
             previous_was_sync_frame = False
 
             # Start the data aquisition
-            lighthouse_uart_frame = LighthouseUartFrame()
-            while get_uart_frame_raw(serial_port, lighthouse_uart_frame):
+            is_frame_valid = True
+            while is_frame_valid:
+                is_frame_valid, lighthouse_uart_frame = get_uart_frame_raw(serial_port)
                 # Reset angles
                 if lighthouse_uart_frame.is_sync_frame and previous_was_sync_frame:
                     print ("clear")
