@@ -7,55 +7,55 @@ from enum import Enum
 OOTX_MAX_FRAME_LENGTH = 43
 
 class RXState(Enum):
-    rxLenght = 1
-    rxData = 2
-    rxCrc0 = 3
-    rxCrc1 = 4
-    rxDone = 5
+    rxLenght = 0
+    rxData = 1
+    rxCrc0 = 2
+    rxCrc1 = 3
+    rxDone = 4
 
 def betole (value):
     return ((value & 0xff00) >> 8) | ((value & 0xff) << 8)
 
 @dataclass
 class OOTXDataFrame:
-    protocolVersion: int
-    firmwareVersion: int
-    id: int
-    phase0: float
-    phase1: float
-    tilt0: float
-    tilt1: float
-    unlockCount: int
-    hwVersion: int
-    curve0: float
-    curve1: float
-    accelX: int
-    accelY: int
-    accelZ: int
-    gibphase0: float
-    gibphase1: float
-    gibmag0: float
-    gibmag1: float
-    mode: int
-    faults: int
-    ogeephase0: float
-    ogeephase1: float
-    ogeemag0: float
-    ogeemag1: float
+    protocolVersion: int = 0
+    firmwareVersion: int = 0
+    id: int = 0
+    phase0: float = 0.0
+    phase1: float = 0.0
+    tilt0: float = 0.0
+    tilt1: float = 0.0
+    unlockCount: int = 0
+    hwVersion: int = 0
+    curve0: float = 0.0
+    curve1: float = 0.0
+    accelX: int = 0
+    accelY: int = 0
+    accelZ: int = 0
+    gibphase0: float = 0.0
+    gibphase1: float = 0.0
+    gibmag0: float = 0.0
+    gibmag1: float = 0.0
+    mode: int = 0
+    faults: int = 0
+    ogeephase0: float = 0.0
+    ogeephase1: float = 0.0
+    ogeemag0: float = 0.0
+    ogeemag1: float = 0.0
 
 class OOTXDecoder:
     def __init__(self):
-        self.n_zeros: int
-        self.synchronized: bool
-        self.bit_in_word: int
-        self.word_received: int
-        self.is_fully_decoded: bool
-        self.rx_state: RXState
-        self.current_word: int
-        self.frame_lenght: int
+        self.n_zeros: int = 0
+        self.synchronized: bool = False
+        self.bit_in_word: int = 0
+        self.word_received: int = 0
+        self.is_fully_decoded: bool = False
+        self.rx_state: RXState = RXState.rxLenght
+        self.current_word: int = 0
+        self.frame_lenght: int = 0
         self.data: list[int] = [0] * int(((OOTX_MAX_FRAME_LENGTH + 1) / 2))
-        self.frame: OOTXDataFrame
-        self.crc32: int
+        self.frame: OOTXDataFrame = OOTXDataFrame()
+        self.crc32: int = 0
 
     def ootx_decoder_process_bit(self, data) -> bool:
         data &= 1

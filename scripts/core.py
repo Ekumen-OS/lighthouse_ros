@@ -44,7 +44,7 @@ def get_uart_frame_raw(serial_port: Serial) -> tuple:
     lighthouse_uart_frame.data.channel_found = (reading[0] & 0x80) == 0
     # lighthouse_uart_frame.data.channel = (reading[0] >> 3) & 0x0f
     lighthouse_uart_frame.data.channel = 0  # Hardcode to channel 0 in our case
-    lighthouse_uart_frame.data.slow_bit = int.from_bytes((reading[0] >> 2) & 0x01, "big")
+    lighthouse_uart_frame.data.slow_bit = (reading[0] >> 2) & 0x01
     lighthouse_uart_frame.data.width =  int.from_bytes(reading[1:3], "big")
     lighthouse_uart_frame.data.offset = int.from_bytes(reading[3:7], "big")
     lighthouse_uart_frame.data.beam_data =  int.from_bytes(reading[6:10], "big")
