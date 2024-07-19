@@ -27,10 +27,12 @@ PULSE_PROCESSOR_N_WORKSPACE = (PULSE_PROCESSOR_N_SENSORS * PULSE_PROCESSOR_N_CON
 def cycle_period_to_microseconds(cyclePeriod):
     return cyclePeriod / 24
 
-def ts_diff(x, y):
+def ts_diff(x, y) -> int:
   return (x - y) & PULSE_PROCESSOR_TIMESTAMP_BITMASK
 
-def ts_abs_diff_larger_than(a, b, limit):
+def ts_abs_diff_larger_than(a, b, limit) -> int:
+    print (a)
+    print (type(a))
     return ts_diff(a + limit, b) > (limit * 2)
 
 @dataclass
