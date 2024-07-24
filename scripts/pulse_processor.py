@@ -210,14 +210,16 @@ class PulseProcessor:
         self.pulse_workspace.slots_used = 0
 
     def store_pulse(self, frame_data: PulseProcessorFrame):
-        result = False
         if self.pulse_workspace.slots_used < PULSE_PROCESSOR_N_WORKSPACE:
             self.pulse_workspace.slots[self.pulse_workspace.slots_used] = frame_data
             self.pulse_workspace.slots_used += 1
-            result = True
-        return result
+            return True
+        return False
 
     def process_workspace(self) -> int:
+        # In case a frame or frames in the workspace did not arrive with a channel (basestation ID),
+        # look for the frame that does have a channel and assign that to the other frames in the block workspace.
+        # We tecnically do not need this as we hardcode all channels to 0.
         self.augment_frames_in_workspace()
 
         slots_used = self.pulse_workspace.slots_used
