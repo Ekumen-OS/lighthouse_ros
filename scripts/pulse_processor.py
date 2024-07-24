@@ -126,6 +126,7 @@ class PulseProcessor:
         self.ootx_timestamps = [0] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
     def process_pulse(self, frame_data: PulseProcessorFrame):
+        # TODO: Momentarily disabled, will handle calib later
         # calib_data_is_decoded = self.handle_calibration_data(frame_data)
         calib_data_is_decoded = False
         result, base_station, sweep_id = self.handle_angles(frame_data)
@@ -144,7 +145,8 @@ class PulseProcessor:
         return is_full_message
 
     def handle_angles(self, frame_data: PulseProcessorFrame):
-        self.clear_stale_angles_after_timeout()
+        # TODO: Disabled, will clear angles after printing them in core
+        # self.clear_stale_angles_after_timeout()
 
         n_of_blocks = self.process_frame(frame_data)
         for i in range(n_of_blocks):
@@ -189,6 +191,10 @@ class PulseProcessor:
             if elapsed_time_ms > cycle_period_to_microseconds(CYCLE_PERIODS[i]):
                 self.pulse_processor_clear(i)
 
+    def clear_stale_angles(self):
+        for i in range(config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS):
+            self.pulse_processor_clear(i)
+
     def pulse_processor_clear(self, i):
         for j in range(PULSE_PROCESSOR_N_SENSORS):
             self.angles.base_station_measurements[i].sensor_measurements[j].valid_count = 0
@@ -196,12 +202,19 @@ class PulseProcessor:
     def process_frame(self, frame_data: PulseProcessorFrame):
         n_of_blocks = 0
 
-        is_first_frame_in_new_workspace = ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
-        if is_first_frame_in_new_workspace:
+        # TODO: Mod to break time dependency
+        # Instead of checking timing between frames, when we store 8 pulses process the workframe
+        # is_first_frame_in_new_workspace = ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
+        # if is_first_frame_in_new_workspace:
+        #     n_of_blocks = self.process_workspace()
+        #     self.clear_workspace()
+
+        if self.pulse_workspace.slots_used == PULSE_PROCESSOR_N_WORKSPACE:
             n_of_blocks = self.process_workspace()
             self.clear_workspace()
 
-        self.pulse_workspace.latest_timestamp = frame_data.timestamp
+        # Not needed with the new approach
+        # self.pulse_workspace.latest_timestamp = frame_data.timestamp
 
         if not self.store_pulse(frame_data):
             self.clear_workspace()

@@ -117,6 +117,8 @@ class LighthouseCore:
         (result, base_station, sweep_id, calib_data_is_decoded) = self.pulse_processor.process_pulse(frame.data)
         if result:
             self.use_pulse_result(base_station, sweep_id)
+            print(f'Angles: {self.pulse_processor.angles}')
+            self.pulse_processor.clear_stale_angles()
 
         if calib_data_is_decoded:
             self.use_calibration_data()
