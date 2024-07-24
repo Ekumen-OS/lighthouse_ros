@@ -126,7 +126,8 @@ class PulseProcessor:
         self.ootx_timestamps = [0] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
     def process_pulse(self, frame_data: PulseProcessorFrame):
-        calib_data_is_decoded = self.handle_calibration_data(frame_data)
+        # calib_data_is_decoded = self.handle_calibration_data(frame_data)
+        calib_data_is_decoded = False
         result, base_station, sweep_id = self.handle_angles(frame_data)
         return result, base_station, sweep_id, calib_data_is_decoded
 
