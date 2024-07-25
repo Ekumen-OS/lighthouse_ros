@@ -79,11 +79,14 @@ class LighthouseCore:
         self.ootx_decoder = [OOTXDecoder()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
         self.pulse_processor = PulseProcessor(self.ootx_decoder)
 
-        i2c_address = 0x2f
-        bus = SMBus(1)
-        time.sleep(1)
-        # Write a 0 to get out of the bootloader mode and start receiving data via SPI
-        var = bus.write_byte_data(i2c_address, 0, 0)
+        try:
+            i2c_address = 0x2f
+            bus = SMBus(1)
+            time.sleep(1)
+            # Write a 0 to get out of the bootloader mode and start receiving data via SPI
+            var = bus.write_byte_data(i2c_address, 0, 0)
+        except:
+            print("Out of bootloader mode")
 
         # Start the infinite position estimation loop
         self.core_task(serial_port)
