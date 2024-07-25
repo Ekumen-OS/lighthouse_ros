@@ -241,7 +241,7 @@ class PulseProcessor:
             return 0
         if (slots_used % PULSE_PROCESSOR_N_SENSORS) != 0:
             return 0
-        blocks_in_workspace = slots_used / PULSE_PROCESSOR_N_SENSORS
+        blocks_in_workspace = int(slots_used / PULSE_PROCESSOR_N_SENSORS)
         for block_index in range(blocks_in_workspace):
             block_base_index = block_index * PULSE_PROCESSOR_N_SENSORS
             if not self.process_workspace_block(block_base_index, block_index):
@@ -275,7 +275,7 @@ class PulseProcessor:
         if sensor_mask != 0xf:
             return False
 
-        self.block_workspace.blocks[block_index] = NO_CHANNEL # No channel
+        self.block_workspace.blocks[block_index].channel = NO_CHANNEL # No channel
         for i in range(PULSE_PROCESSOR_N_SENSORS):
             if self.pulse_workspace.slots[block_base_index + i].channel_found:
                 if self.block_workspace.blocks[block_index].channel == NO_CHANNEL:
