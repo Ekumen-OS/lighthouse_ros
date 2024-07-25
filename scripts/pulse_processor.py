@@ -154,7 +154,7 @@ class PulseProcessor:
             block = self.block_workspace.blocks[i]
             channel = block.channel
             if channel < config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS:
-                previous_block = self.blocks[channel]
+                previous_block = self.block_workspace.blocks[channel]
                 if self.is_block_pair_good(block, previous_block):
                     self.calculate_angles(block, previous_block)
                     return True, channel, 1
@@ -275,13 +275,13 @@ class PulseProcessor:
         NO_OFFSET = 0
         NO_CHANNEL = 0xff
 
-
+        # Check there's data for all sensors
         for i in range(PULSE_PROCESSOR_N_SENSORS):
             sensor_mask |= (1 << self.pulse_workspace.slots[block_base_index + i].sensor)
-
         if sensor_mask != 0xf:
             return False
 
+        # Check channel is the same for all frames
         self.block_workspace.blocks[block_index].channel = NO_CHANNEL # No channel
         for i in range(PULSE_PROCESSOR_N_SENSORS):
             if self.pulse_workspace.slots[block_base_index + i].channel_found:
@@ -289,10 +289,10 @@ class PulseProcessor:
                     self.block_workspace.blocks[block_index].channel = self.pulse_workspace.slots[block_base_index + i].channel
                 if self.block_workspace.blocks[block_index].channel != self.pulse_workspace.slots[block_base_index + i].channel:
                     return False
-
         if self.block_workspace.blocks[block_index].channel == NO_CHANNEL:
             return False
 
+        # Only one sensor should have offset?? Not happening in testing
         index_with_offset = NO_SENSOR
         for i in range(PULSE_PROCESSOR_N_SENSORS):
             if self.pulse_workspace.slots[block_base_index + i].offset != NO_OFFSET:
@@ -304,6 +304,7 @@ class PulseProcessor:
         if index_with_offset == NO_SENSOR:
             return False
 
+        # Calculate offsets for all sensors
         for i in range(PULSE_PROCESSOR_N_SENSORS):
             sensor = self.pulse_workspace.slots[block_base_index + i].sensor
             if i == index_with_offset:
