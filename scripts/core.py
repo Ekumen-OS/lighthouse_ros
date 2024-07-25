@@ -108,7 +108,6 @@ class LighthouseCore:
                     self.pulse_processor.pulse_processor_clear()
 
                 elif not lighthouse_uart_frame.is_sync_frame:
-                    print("process")
                     self.process_frames(lighthouse_uart_frame)
 
                 previous_was_sync_frame = lighthouse_uart_frame.is_sync_frame
