@@ -124,6 +124,7 @@ class PulseProcessor:
         self.block_workspace = PulseProcessorBlockWorkspace()
         self.blocks = PulseProcessorSweepBlock()
         self.ootx_timestamps = [0] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
+        self.sensors_stored = set()
 
     def process_pulse(self, frame_data: PulseProcessorFrame):
         # TODO: Momentarily disabled, will handle calib later
@@ -225,9 +226,11 @@ class PulseProcessor:
 
     def store_pulse(self, frame_data: PulseProcessorFrame):
         if self.pulse_workspace.slots_used < PULSE_PROCESSOR_N_WORKSPACE:
-            self.pulse_workspace.slots[self.pulse_workspace.slots_used] = frame_data
-            self.pulse_workspace.slots_used += 1
-            return True
+            if frame_data.sensor not in self.sensors_stored:
+                self.pulse_workspace.slots[self.pulse_workspace.slots_used] = frame_data
+                self.pulse_workspace.slots_used += 1
+                self.sensors_stored.add(frame_data.sensor)
+                return True
         return False
 
     def process_workspace(self) -> int:
