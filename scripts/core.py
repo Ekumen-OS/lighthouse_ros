@@ -62,15 +62,15 @@ def get_uart_frame_raw(serial_port: Serial) -> tuple:
 def wait_for_sync(src: Serial):
     # Wait for sync
     print("Waiting for sync ...")
-    sync = [b'\xff', b'\xff', b'\xff', b'\xff', b'\xff', b'\xff', b'\xff', b'\xff', b'\xff', b'\xff', b'\xff', b'\xff']
-    syncBuffer = [b'\x00'] * len(sync)
-    while sync != syncBuffer:
-        b = src.read(1)
-        if len(b) < 1:
-            sys.exit(1)
-        syncBuffer.append(b)
-        syncBuffer = syncBuffer[1:]
-
+    sync = False
+    sync_counter = 0
+    while not sync:
+        reading = src.read(1)
+        if reading == b'\xff':
+            sync_counter += 1
+        else:
+            sync_counter = 0
+        sync = (sync_counter == UART_FRAME_LENGTH)
     print("Found sync!")
 
 class LighthouseCore:
@@ -92,10 +92,8 @@ class LighthouseCore:
         self.core_task(serial_port)
 
     def core_task(self, serial_port: Serial):
-        # TODO: This is inside the "while true" in the firmware, but sync frames are sent only once for v2 so it doesn't make sense?
-        wait_for_sync(serial_port)
-
         while(True):
+            wait_for_sync(serial_port)
             previous_was_sync_frame = False
 
             # Start the data aquisition

@@ -124,7 +124,6 @@ class PulseProcessor:
         self.block_workspace = PulseProcessorBlockWorkspace()
         self.blocks = PulseProcessorSweepBlock()
         self.ootx_timestamps = [0] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
-        self.sensors_stored = set()
 
     def process_pulse(self, frame_data: PulseProcessorFrame):
         # TODO: Momentarily disabled, will handle calib later
@@ -203,19 +202,13 @@ class PulseProcessor:
     def process_frame(self, frame_data: PulseProcessorFrame):
         n_of_blocks = 0
 
-        # TODO: Mod to break time dependency
-        # Instead of checking timing between frames, when we store 8 pulses process the workframe
-        # is_first_frame_in_new_workspace = ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
-        # if is_first_frame_in_new_workspace:
-        #     n_of_blocks = self.process_workspace()
-        #     self.clear_workspace()
-
-        if self.pulse_workspace.slots_used == PULSE_PROCESSOR_N_WORKSPACE:
+        is_first_frame_in_new_workspace = ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
+        if is_first_frame_in_new_workspace:
             n_of_blocks = self.process_workspace()
             self.clear_workspace()
 
         # Not needed with the new approach
-        # self.pulse_workspace.latest_timestamp = frame_data.timestamp
+        self.pulse_workspace.latest_timestamp = frame_data.timestamp
 
         if not self.store_pulse(frame_data):
             self.clear_workspace()
@@ -225,15 +218,9 @@ class PulseProcessor:
         self.pulse_workspace.slots_used = 0
 
     def store_pulse(self, frame_data: PulseProcessorFrame):
-        # Try to build 2 blocks each with frames from the 4 sensors
         if self.pulse_workspace.slots_used < PULSE_PROCESSOR_N_WORKSPACE:
-            if frame_data.sensor not in self.sensors_stored:
-                self.pulse_workspace.slots[self.pulse_workspace.slots_used] = frame_data
-                self.pulse_workspace.slots_used += 1
-                self.sensors_stored.add(frame_data.sensor)
-            # If one block gets filled, clear sensor set and fill next one
-            if len(self.sensors_stored) == PULSE_PROCESSOR_N_SENSORS:
-                self.sensors_stored.clear()
+            self.pulse_workspace.slots[self.pulse_workspace.slots_used] = frame_data
+            self.pulse_workspace.slots_used += 1
             return True
         return False
 
