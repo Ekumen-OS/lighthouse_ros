@@ -225,12 +225,16 @@ class PulseProcessor:
         self.pulse_workspace.slots_used = 0
 
     def store_pulse(self, frame_data: PulseProcessorFrame):
+        # Try to build 2 blocks each with frames from the 4 sensors
         if self.pulse_workspace.slots_used < PULSE_PROCESSOR_N_WORKSPACE:
             if frame_data.sensor not in self.sensors_stored:
                 self.pulse_workspace.slots[self.pulse_workspace.slots_used] = frame_data
                 self.pulse_workspace.slots_used += 1
                 self.sensors_stored.add(frame_data.sensor)
-                return True
+            # If one block gets filled, clear sensor set and fill next one
+            if len(self.sensors_stored) == PULSE_PROCESSOR_N_SENSORS:
+                self.sensors_stored.clear()
+            return True
         return False
 
     def process_workspace(self) -> int:
