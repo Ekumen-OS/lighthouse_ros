@@ -53,7 +53,7 @@ def get_uart_frame_raw(serial_port: Serial) -> tuple:
     lighthouse_uart_frame.data.width = (first_word >> 8) & 0xffff
 
     identity = (first_word >> 2) & 0x1f
-    lighthouse_uart_frame.data.channel = 1
+    lighthouse_uart_frame.data.channel = 0
     lighthouse_uart_frame.data.channel_found = True
     lighthouse_uart_frame.data.slow_bit = identity & 1
 

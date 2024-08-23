@@ -51,7 +51,7 @@ class PulseProcessorFrame:
         self.sensor = 0
         self.timestamp = 0
         self.width = 0
-        self.beamdata = 0
+        self.beam_data = 0
         self.offset = 0
         self.channel = 0
         self.slow_bit = 0
