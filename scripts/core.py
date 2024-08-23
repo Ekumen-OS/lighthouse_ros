@@ -40,23 +40,24 @@ def get_uart_frame_raw(serial_port: Serial) -> tuple:
     # Unpack
     lighthouse_uart_frame = LighthouseUartFrame()
 
-    lighthouse_uart_frame.data.sensor = reading[0] & 0x03
-    lighthouse_uart_frame.data.channel_found = (reading[0] & 0x80) == 0
-    # lighthouse_uart_frame.data.channel = (reading[0] >> 3) & 0x0f
-    lighthouse_uart_frame.data.channel = 0  # Hardcode to channel 0 in our case
-    lighthouse_uart_frame.data.slow_bit = (reading[0] >> 2) & 0x01
-    lighthouse_uart_frame.data.width =  int.from_bytes(reading[1:3], "big")
-    lighthouse_uart_frame.data.offset = int.from_bytes(reading[3:7], "big")
-    lighthouse_uart_frame.data.beam_data =  int.from_bytes(reading[6:10], "big")
-    lighthouse_uart_frame.data.timestamp = int.from_bytes(reading[9:12], "big")
+    lighthouse_uart_frame.data.timestamp = struct.unpack("<I", reading[9:] + b'\x00')[0]
+    lighthouse_uart_frame.data.beam_data = struct.unpack("<I", reading[6:9] + b'\x00')[0]
+    offset_6 = struct.unpack("<I", reading[3:6] + b'\x00')[0]
+    first_word = struct.unpack("<I", reading[:3] + b'\x00')[0]
 
     # Offset is expressed in a 6 MHz clock, while the timestamp uses a 24 MHz clock.
     # update offset to a 24 MHz clock
-    lighthouse_uart_frame.data.offset *= 4
+    lighthouse_uart_frame.data.offset = offset_6 * 4
 
-    is_padding_zero = False
+    lighthouse_uart_frame.data.sensor = first_word & 0x03
+    lighthouse_uart_frame.data.width = (first_word >> 8) & 0xffff
+
+    identity = (first_word >> 2) & 0x1f
+    lighthouse_uart_frame.data.channel = 1
+    lighthouse_uart_frame.data.channel_found = True
+    lighthouse_uart_frame.data.slow_bit = identity & 1
+
     is_padding_zero = (((reading[5] | reading[8]) & 0xfe) == 0)
-
     return (is_padding_zero or lighthouse_uart_frame.is_sync_frame, lighthouse_uart_frame)
 
 def wait_for_sync(src: Serial):
