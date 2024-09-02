@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from lighthouse_calibration import LighthouseCalibration
+from lighthouse_calibration import LighthouseCalibration, LighthouseCalibrationSweep
 import config
 import time
 import math
@@ -303,3 +303,49 @@ class PulseProcessor:
         self.block_workspace.blocks[block_index].timestamp = ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + index_with_offset].offset)
 
         return True
+
+    def apply_calibration(self, bs: int):
+        """Applies the bs calibration to the measured angles before estimating pos."""
+        if self.base_station_calibration[bs].valid:
+            max_delta = 0.0005
+            for sensor in range(PULSE_PROCESSOR_N_SENSORS):
+                self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles
+
+                # Don't know why 5 times
+                for i in range(5):
+                    current_distorted_angles = self.ideal_to_distorted(self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles, self.base_station_calibration[bs])
+                    delta0 = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles[0] - current_distorted_angles[0]
+                    delta1 = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles[1] - current_distorted_angles[1]
+
+                    self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles[0] += delta0
+                    self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles[1] += delta1
+
+                    if abs(delta0) < max_delta and abs(delta1) < max_delta:
+                        break
+
+    def ideal_to_distorted(self, ideal: list, calib: LighthouseCalibrationSweep) -> list:
+        t30 = math.pi / 6
+        tan30 = 0.5773502691896258
+
+        a1 = ideal[0]
+        a2 = ideal[1]
+
+        x = 1.0
+        y = math.tan((a2 + a1) / 2.0)
+        z = math.sin((a2 - a1) / (tan30 * (math.cos(a2) * math.cos(a1))))
+
+        return [self.apply_lh2_model(x, y, z, -t30, calib[0]), self.apply_lh2_model(x, y, z, t30, calib[1])]
+
+    def apply_lh2_model(self, x: float, y: float, z: float, t: float, calib: LighthouseCalibrationSweep) -> float:
+        ax = math.atan2(y, x)
+        r = math.sqrt(x * x + y * y)
+
+        to_clip = z * math.tan(t - calib.tilt) / r
+        if to_clip < -1.0:
+            to_clip = -1.0
+        if to_clip > 1.0:
+            to_clip = 1.0
+
+        base = ax + math.asin(to_clip)
+        comp_gib = -calib.gibmag * math.cos(ax + calib.gibphase)
+        return base - (calib.phase + comp_gib)

@@ -2,7 +2,7 @@ import sys, struct
 import config
 import time
 from dataclasses import dataclass
-from pulse_processor import PulseProcessor, PulseProcessorFrame
+from pulse_processor import PulseProcessor, PulseProcessorFrame, PULSE_PROCESSOR_N_SENSORS
 from ootx_decoder import OOTXDecoder
 from lighthouse_calibration import LighthouseCalibration
 from smbus2 import SMBus
@@ -125,6 +125,15 @@ class LighthouseCore:
             self.use_calibration_data()
 
     def use_pulse_result(self, base_station, sweep_id):
+        if sweep_id == 1:
+            if self.pulse_processor.apply_calibration(base_station):
+                # TODO: Firmware here throttles V2 samples, needed?
+                # self.throttle()
+                self.pulse_processor.clear_outdated()
+                # Do the pose estimation
+                self.position_estimator.estimate_pose_sweeps()
+                # Clear angles after using them to estimate position
+                self.pulse_processor.clear_stale_angles()
         # TODO
         print ("Using pulse result... Code it in")
 
