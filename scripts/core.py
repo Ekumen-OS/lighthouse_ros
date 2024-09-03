@@ -127,12 +127,12 @@ class LighthouseCore:
     def use_pulse_result(self, base_station, sweep_id):
         if sweep_id == 1:
             if self.pulse_processor.apply_calibration(base_station):
-                # TODO: Firmware here throttles V2 samples, needed?
-                # self.throttle()
-                self.pulse_processor.clear_outdated()
-                # Do the pose estimation
-                self.position_estimator.estimate_pose_sweeps()
-                # Clear angles after using them to estimate position
+                # # TODO: Firmware here throttles V2 samples, needed?
+                # # self.throttle()
+                # self.pulse_processor.clear_outdated()
+                # # Do the pose estimation
+                # self.position_estimator.estimate_pose_sweeps()
+                # # Clear angles after using them to estimate position
                 self.pulse_processor.clear_stale_angles()
         # TODO
         print ("Using pulse result... Code it in")

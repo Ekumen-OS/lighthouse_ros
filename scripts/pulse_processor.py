@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from lighthouse_calibration import LighthouseCalibration, LighthouseCalibrationSweep
+from ootx_decoder import OOTXDecoder
 import config
 import time
 import math
@@ -114,7 +115,7 @@ class PulseProcessorBlockWorkspace:
         self.blocks = [PulseProcessorSweepBlock()] * PULSE_PROCESSOR_N_CONCURRENT_BLOCKS
 
 class PulseProcessor:
-    def __init__(self, ootx_decoder):
+    def __init__(self, ootx_decoder: list):
         self.ootx_decoder = ootx_decoder
         self.base_station_calibration = [LighthouseCalibration()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
         self.angles = PulseProcessorResult()
@@ -126,9 +127,7 @@ class PulseProcessor:
         self.ootx_timestamps = [0] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
     def process_pulse(self, frame_data: PulseProcessorFrame):
-        # TODO: Momentarily disabled, will handle calib later
-        # calib_data_is_decoded = self.handle_calibration_data(frame_data)
-        calib_data_is_decoded = False
+        calib_data_is_decoded = self.handle_calibration_data(frame_data)
         result, base_station, sweep_id = self.handle_angles(frame_data)
         return result, base_station, sweep_id, calib_data_is_decoded
 
@@ -306,22 +305,28 @@ class PulseProcessor:
 
     def apply_calibration(self, bs: int):
         """Applies the bs calibration to the measured angles before estimating pos."""
-        if self.base_station_calibration[bs].valid:
+        do_apply_calibration = self.base_station_calibration[bs].valid
+        if do_apply_calibration:
             max_delta = 0.0005
             for sensor in range(PULSE_PROCESSOR_N_SENSORS):
-                self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles
+                if do_apply_calibration:
+                    self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles
+                    # Don't know why 5 times, probably to reach the specified delta
+                    for i in range(5):
+                        current_distorted_angles = self.ideal_to_distorted(self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles, self.base_station_calibration[bs])
+                        delta0 = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles[0] - current_distorted_angles[0]
+                        delta1 = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles[1] - current_distorted_angles[1]
 
-                # Don't know why 5 times
-                for i in range(5):
-                    current_distorted_angles = self.ideal_to_distorted(self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles, self.base_station_calibration[bs])
-                    delta0 = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles[0] - current_distorted_angles[0]
-                    delta1 = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles[1] - current_distorted_angles[1]
+                        self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles[0] += delta0
+                        self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles[1] += delta1
 
-                    self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles[0] += delta0
-                    self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles[1] += delta1
-
-                    if abs(delta0) < max_delta and abs(delta1) < max_delta:
-                        break
+                        if abs(delta0) < max_delta and abs(delta1) < max_delta:
+                            break
+                        print(f'Corrected angles: {self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles}')
+                else:
+                    self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles
+            return True
+        return False
 
     def ideal_to_distorted(self, ideal: list, calib: LighthouseCalibrationSweep) -> list:
         t30 = math.pi / 6
