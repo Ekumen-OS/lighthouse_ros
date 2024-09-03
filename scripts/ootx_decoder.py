@@ -7,7 +7,7 @@ from enum import Enum
 OOTX_MAX_FRAME_LENGTH = 43
 
 class RXState(Enum):
-    rxLenght = 0
+    rxLength = 0
     rxData = 1
     rxCrc0 = 2
     rxCrc1 = 3
@@ -50,7 +50,7 @@ class OOTXDecoder:
         self.bit_in_word: int = 0
         self.word_received: int = 0
         self.is_fully_decoded: bool = False
-        self.rx_state: RXState = RXState.rxLenght
+        self.rx_state: RXState = RXState.rxLength
         self.current_word: int = 0
         self.frame_lenght: int = 0
         self.data: list[int] = [0] * int(((OOTX_MAX_FRAME_LENGTH + 1) / 2))
@@ -91,7 +91,7 @@ class OOTXDecoder:
             self.bit_in_word += 1
             if self.bit_in_word == 16:
                 match self.rx_state:
-                    case RXState.rxLenght:
+                    case RXState.rxLength:
                         self.frame_length = betole(self.current_word)
                         if self.frame_lenght > OOTX_MAX_FRAME_LENGTH:
                             self.synchronized = False
