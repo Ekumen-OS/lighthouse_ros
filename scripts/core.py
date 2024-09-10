@@ -3,6 +3,7 @@ import config
 import time
 from dataclasses import dataclass
 from pulse_processor import PulseProcessor, PulseProcessorFrame, PULSE_PROCESSOR_N_SENSORS
+from pose_estimator import PoseEstimator
 from ootx_decoder import OOTXDecoder
 from lighthouse_calibration import LighthouseCalibration
 from smbus2 import SMBus
@@ -79,6 +80,7 @@ class LighthouseCore:
         # Class variables
         self.ootx_decoder = [OOTXDecoder()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
         self.pulse_processor = PulseProcessor(self.ootx_decoder)
+        self.pose_estimator = PoseEstimator()
 
         try:
             i2c_address = 0x2f
@@ -118,21 +120,22 @@ class LighthouseCore:
         (result, base_station, sweep_id, calib_data_is_decoded) = self.pulse_processor.process_pulse(frame.data)
         if result:
             self.use_pulse_result(base_station, sweep_id)
-            print(f'Angles: {self.pulse_processor.angles.base_station_measurements[0].sensor_measurements[0].angles}')
+            # DEBUG print
+            # print(f'Angles: {self.pulse_processor.angles.base_station_measurements[0].sensor_measurements[0].angles}')
             self.pulse_processor.clear_stale_angles()
 
         if calib_data_is_decoded:
             self.use_calibration_data()
 
-    def use_pulse_result(self, base_station, sweep_id):
+    def use_pulse_result(self, base_station: int, sweep_id: int):
         if sweep_id == 1:
             if self.pulse_processor.apply_calibration(base_station):
-                # # TODO: Firmware here throttles V2 samples, needed?
-                # # self.throttle()
-                # self.pulse_processor.clear_outdated()
-                # # Do the pose estimation
-                # self.position_estimator.estimate_pose_sweeps()
-                # # Clear angles after using them to estimate position
+                # TODO: Firmware here throttles V2 samples, needed?
+                # self.throttle()
+                self.pulse_processor.clear_outdated(base_station)
+                # Do the pose estimation. We would pass the bs geometry here if we had one
+                self.pose_estimator.estimate_pose_sweeps(self.pulse_processor.base_station_calibration[base_station], self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements)
+                # Clear angles after using them to estimate position
                 self.pulse_processor.clear_stale_angles()
         # TODO
         print ("Using pulse result... Code it in")

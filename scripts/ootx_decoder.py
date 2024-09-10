@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+import zlib
 
 # WARN: This module might be a cause of failures. Lots of byte ops with uints, ulongs, etc.
 
@@ -53,9 +54,11 @@ class OOTXDecoder:
         self.rx_state: RXState = RXState.rxLength
         self.current_word: int = 0
         self.frame_lenght: int = 0
+        self.crc32: int = 0
+
+        # TODO: The C firmware uses a union for these two data and frame values. Cannot replicate this in Python
         self.data: list[int] = [0] * int(((OOTX_MAX_FRAME_LENGTH + 1) / 2))
         self.frame: OOTXDataFrame = OOTXDataFrame()
-        self.crc32: int = 0
 
     def ootx_decoder_process_bit(self, data) -> bool:
         data &= 1
@@ -80,7 +83,7 @@ class OOTXDecoder:
                     return False
                 self.bit_in_word = 0
                 if self.rx_state == RXState.rxDone:
-                    is_data_valid = self.check_crc()        # TODO
+                    is_data_valid = self.check_crc()
                     self.is_fully_decoded = is_data_valid
                     self.synchronized = False
                     return is_data_valid
@@ -113,3 +116,8 @@ class OOTXDecoder:
                         pass
         self.is_fully_decoded = False
         return False
+
+    def check_crc(self):
+        """Computes the CRC32 of the received data and compares against the received CRC32."""
+        received_crc32 = zlib.crc32(self.data)
+        return received_crc32 == self.crc32

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from lighthouse_calibration import LighthouseCalibration, LighthouseCalibrationSweep
+from lighthouse_calibration import LighthouseCalibration, LighthouseCalibrationSweep, apply_lh2_model
 from ootx_decoder import OOTXDecoder
 import config
 import time
@@ -119,6 +119,7 @@ class PulseProcessor:
         self.ootx_decoder = ootx_decoder
         self.base_station_calibration = [LighthouseCalibration()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
         self.angles = PulseProcessorResult()
+        self.received_bs_sweep = [bool] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
         # pulseProcessorV2 struct
         self.pulse_workspace = PulseProcessorPulseWorkspace()
@@ -193,6 +194,14 @@ class PulseProcessor:
     def clear_stale_angles(self):
         for i in range(config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS):
             self.pulse_processor_clear(i)
+
+    def clear_outdated(self, bs: int):
+        if self.received_bs_sweep[bs]:
+            for i in range(config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS):
+                if not self.received_bs_sweep[i]:
+                    self.pulse_processor_clear(i)
+                self.received_bs_sweep[i] = False
+        self.received_bs_sweep[bs] = True
 
     def pulse_processor_clear(self, i):
         for j in range(PULSE_PROCESSOR_N_SENSORS):
@@ -339,18 +348,4 @@ class PulseProcessor:
         y = math.tan((a2 + a1) / 2.0)
         z = math.sin((a2 - a1) / (tan30 * (math.cos(a2) * math.cos(a1))))
 
-        return [self.apply_lh2_model(x, y, z, -t30, calib[0]), self.apply_lh2_model(x, y, z, t30, calib[1])]
-
-    def apply_lh2_model(self, x: float, y: float, z: float, t: float, calib: LighthouseCalibrationSweep) -> float:
-        ax = math.atan2(y, x)
-        r = math.sqrt(x * x + y * y)
-
-        to_clip = z * math.tan(t - calib.tilt) / r
-        if to_clip < -1.0:
-            to_clip = -1.0
-        if to_clip > 1.0:
-            to_clip = 1.0
-
-        base = ax + math.asin(to_clip)
-        comp_gib = -calib.gibmag * math.cos(ax + calib.gibphase)
-        return base - (calib.phase + comp_gib)
+        return [apply_lh2_model(x, y, z, -t30, calib[0]), apply_lh2_model(x, y, z, t30, calib[1])]
