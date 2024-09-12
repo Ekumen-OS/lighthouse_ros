@@ -80,7 +80,6 @@ class LighthouseCore:
         # Class variables
         self.ootx_decoder = [OOTXDecoder()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
         self.pulse_processor = PulseProcessor(self.ootx_decoder)
-        self.pose_estimator = PoseEstimator()
 
         try:
             i2c_address = 0x2f
@@ -134,7 +133,7 @@ class LighthouseCore:
                 # self.throttle()
                 self.pulse_processor.clear_outdated(base_station)
                 # Do the pose estimation. We would pass the bs geometry here if we had one
-                self.pose_estimator.estimate_pose_sweeps(self.pulse_processor.base_station_calibration[base_station], self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements)
+                # self.pose_estimator.estimate_pose_sweeps(self.pulse_processor.base_station_calibration[base_station], self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements)
                 # Clear angles after using them to estimate position
                 self.pulse_processor.clear_stale_angles()
         # TODO

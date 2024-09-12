@@ -2,10 +2,13 @@ from dataclasses import dataclass
 from enum import Enum
 import zlib
 
-# WARN: This module might be a cause of failures. Lots of byte ops with uints, ulongs, etc.
+# Documentation can be found here: https://github.com/nairol/LighthouseRedox/blob/master/docs/Light%20Emissions.md
 
-
+# Constants
 OOTX_MAX_FRAME_LENGTH = 43
+
+def betole (value: int) -> int:
+    return ((value & 0xff00) >> 8) | ((value & 0xff) << 8)
 
 class RXState(Enum):
     rxLength = 0
@@ -14,11 +17,9 @@ class RXState(Enum):
     rxCrc1 = 3
     rxDone = 4
 
-def betole (value):
-    return ((value & 0xff00) >> 8) | ((value & 0xff) << 8)
-
 @dataclass
 class OOTXDataFrame:
+    """The intrinsic base station calibration information."""
     protocolVersion: int = 0
     firmwareVersion: int = 0
     id: int = 0
@@ -45,6 +46,7 @@ class OOTXDataFrame:
     ogeemag1: float = 0.0
 
 class OOTXDecoder:
+    """Class in charge of receiving the bs calibration slow bits and decoding them."""
     def __init__(self):
         self.n_zeros: int = 0
         self.synchronized: bool = False
@@ -60,7 +62,15 @@ class OOTXDecoder:
         self.data: list[int] = [0] * int(((OOTX_MAX_FRAME_LENGTH + 1) / 2))
         self.frame: OOTXDataFrame = OOTXDataFrame()
 
-    def ootx_decoder_process_bit(self, data) -> bool:
+    def ootx_decoder_process_bit(self, data: int) -> bool:
+        """Processes the calibration slow bit.
+
+        Args:
+            data (int): The base station calibration slow bit
+
+        Returns:
+            bool: If the calibration was fully or not
+        """
         data &= 1
 
         if self.n_zeros == 17 and data == 1:
@@ -117,7 +127,7 @@ class OOTXDecoder:
         self.is_fully_decoded = False
         return False
 
-    def check_crc(self):
-        """Computes the CRC32 of the received data and compares against the received CRC32."""
+    def check_crc(self) -> bool:
+        """Computes the CRC32 of the complete received cal data and compares against the received CRC32."""
         received_crc32 = zlib.crc32(self.data)
         return received_crc32 == self.crc32

@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 from lighthouse_calibration import LighthouseCalibration, LighthouseCalibrationSweep, apply_lh2_model
-from ootx_decoder import OOTXDecoder
 import config
 import time
 import math
 
-# Base stations perform an horizontal and a vertical sweep
+# Base stations perform a horizontal and a vertical sweep
 PULSE_PROCESSOR_N_SWEEPS = 2
 
 # 4 sensors in the PCB
