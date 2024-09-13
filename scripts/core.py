@@ -1,85 +1,26 @@
-import sys, struct
+# External
+import sys
 import config
 import time
-from dataclasses import dataclass
-from pulse_processor import PulseProcessor, PulseProcessorFrame, PULSE_PROCESSOR_N_SENSORS
-from pose_estimator import PoseEstimator
+from smbus2 import SMBus
+
+# Internal
+from pulse_processor import PulseProcessor
 from ootx_decoder import OOTXDecoder
 from lighthouse_calibration import LighthouseCalibration
-from smbus2 import SMBus
-from serial import Serial
+from serial_handler import SerialHandler, LighthouseUartFrame
 
 # Hand testing:
 # Create a virtual serial in one terminal: socat -d -d pty,raw,echo=0 pty,raw,echo=0
 # Run the core.py script passing the virtual serial port
 # Send byte words with: printf '%b' 'bytes' > /dev/pts/...
 
-# Length of the received uart frame from the base station
-UART_FRAME_LENGTH = 12
-
-@dataclass
-class LighthouseUartFrame:
-    data: PulseProcessorFrame
-    is_sync_frame: bool
-
-    def __init__(self):
-        self.data = PulseProcessorFrame()
-        self.is_sync_frame = False
-
-
-def get_uart_frame_raw(serial_port: Serial) -> tuple:
-    reading = serial_port.read(UART_FRAME_LENGTH)
-
-    lighthouse_uart_frame = LighthouseUartFrame() # Reset data structure
-
-    # Sync frame
-    if reading == 0xffffffffffffffffffffffff:
-        lighthouse_uart_frame.is_sync_frame = True
-    else:
-        lighthouse_uart_frame.is_sync_frame = False
-
-    # Unpack
-    lighthouse_uart_frame = LighthouseUartFrame()
-
-    lighthouse_uart_frame.data.timestamp = struct.unpack("<I", reading[9:] + b'\x00')[0]
-    lighthouse_uart_frame.data.beam_data = struct.unpack("<I", reading[6:9] + b'\x00')[0]
-    offset_6 = struct.unpack("<I", reading[3:6] + b'\x00')[0]
-    first_word = struct.unpack("<I", reading[:3] + b'\x00')[0]
-
-    # Offset is expressed in a 6 MHz clock, while the timestamp uses a 24 MHz clock.
-    # update offset to a 24 MHz clock
-    lighthouse_uart_frame.data.offset = offset_6 * 4
-
-    lighthouse_uart_frame.data.sensor = first_word & 0x03
-    lighthouse_uart_frame.data.width = (first_word >> 8) & 0xffff
-
-    identity = (first_word >> 2) & 0x1f
-    lighthouse_uart_frame.data.channel = 0
-    lighthouse_uart_frame.data.channel_found = True
-    lighthouse_uart_frame.data.slow_bit = identity & 1
-
-    is_padding_zero = (((reading[5] | reading[8]) & 0xfe) == 0)
-    return (is_padding_zero or lighthouse_uart_frame.is_sync_frame, lighthouse_uart_frame)
-
-def wait_for_sync(src: Serial):
-    # Wait for sync
-    print("Waiting for sync ...")
-    sync = False
-    sync_counter = 0
-    while not sync:
-        reading = src.read(1)
-        if reading == b'\xff':
-            sync_counter += 1
-        else:
-            sync_counter = 0
-        sync = (sync_counter == UART_FRAME_LENGTH)
-    print("Found sync!")
-
 class LighthouseCore:
-    def __init__(self, serial_port: Serial):
+    def __init__(self, serial_handler: SerialHandler):
         # Class variables
         self.ootx_decoder = [OOTXDecoder()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
         self.pulse_processor = PulseProcessor(self.ootx_decoder)
+        self.serial_handler = serial_handler
 
         try:
             i2c_address = 0x2f
@@ -91,17 +32,17 @@ class LighthouseCore:
             print("Out of bootloader mode")
 
         # Start the infinite position estimation loop
-        self.core_task(serial_port)
+        self.core_task()
 
-    def core_task(self, serial_port: Serial):
+    def core_task(self):
         while(True):
-            wait_for_sync(serial_port)
+            self.serial_handler.wait_for_sync()
             previous_was_sync_frame = False
 
             # Start the data aquisition
             is_frame_valid = True
             while is_frame_valid:
-                is_frame_valid, lighthouse_uart_frame = get_uart_frame_raw(serial_port)
+                is_frame_valid, lighthouse_uart_frame = self.serial_handler.get_uart_frame_raw()
                 # Reset angles
                 if lighthouse_uart_frame.is_sync_frame and previous_was_sync_frame:
                     print ("clear")
@@ -175,9 +116,6 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: {} <input.bin or /dev/tty...>".format(sys.argv[0]))
         exit(1)
-    if sys.argv[1].startswith("/dev/"):
-        src = Serial(sys.argv[1], 2*115200)
-    else:
-        src = open(sys.argv[1], "rb")
 
-    lighthouse_core = LighthouseCore(src)
+    serial_handler = SerialHandler(sys.argv[1])
+    lighthouse_core = LighthouseCore(serial_handler)

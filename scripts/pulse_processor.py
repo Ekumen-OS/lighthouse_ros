@@ -18,7 +18,6 @@ MIN_TICKS_BETWEEN_SLOW_BITS = int((887000 / 2) * 8 / 10)
 MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = int(10)
 MAX_TICKS_SENSOR_TO_SENSOR = int(10000)
 
-V2_N_CHANNELS = 16
 CYCLE_PERIODS = [ 959000 / 2, 957000 / 2, 953000 / 2, 949000 / 2, 947000 / 2, 943000 / 2, 941000 / 2, 939000 / 2, 937000 / 2, 929000 / 2, 919000 / 2, 911000 / 2, 907000 / 2, 901000 / 2, 893000 / 2, 887000 / 2]
 
 PULSE_PROCESSOR_N_CONCURRENT_BLOCKS = 2
@@ -36,7 +35,6 @@ def ts_abs_diff_larger_than(a, b, limit) -> int:
 @dataclass
 class PulseProcessorFrame:
     # Structure definition at https://github.com/bitcraze/lighthouse-fpga
-    is_sync_frame: bool
     sensor: int
     timestamp: int
     width: int
@@ -47,7 +45,6 @@ class PulseProcessorFrame:
     channel_found: bool
 
     def __init__(self):
-        self.is_sync_frame = False
         self.sensor = 0
         self.timestamp = 0
         self.width = 0
