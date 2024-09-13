@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from lighthouse_calibration import LighthouseCalibrationSweep
 import config
 import time
 import math_helper

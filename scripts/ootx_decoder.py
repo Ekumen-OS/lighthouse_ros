@@ -56,7 +56,7 @@ class OOTXDecoder:
         self.is_fully_decoded: bool = False
         self.rx_state: RXState = RXState.rxLength
         self.current_word: int = 0
-        self.frame_lenght: int = 0
+        self.frame_length: int = 0
         self.crc32: int = 0
 
         # TODO: The C firmware uses a union for these two data and frame values. Cannot replicate this in Python
@@ -109,7 +109,7 @@ class OOTXDecoder:
                 match self.rx_state:
                     case RXState.rxLength:
                         self.frame_length = betole(self.current_word)
-                        if self.frame_lenght > OOTX_MAX_FRAME_LENGTH:
+                        if self.frame_length > OOTX_MAX_FRAME_LENGTH:
                             self.synchronized = False
                             self.is_fully_decoded = False
                             return False
@@ -117,7 +117,7 @@ class OOTXDecoder:
                     case RXState.rxData:
                         self.data[self.word_received] = betole(self.current_word)
                         self.word_received += 1
-                        if 2 * self.word_received >= self.frame_lenght:
+                        if 2 * self.word_received >= self.frame_length:
                             self.rx_state = RXState.rxCrc0
                     case RXState.rxCrc0:
                         self.crc32 = betole(self.current_word)
