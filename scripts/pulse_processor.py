@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 import config
 import time
-import math_helper
+import math
+
+from math_helper import ts_abs_diff_larger_than, ts_diff
 
 # Base stations perform a horizontal and a vertical sweep
 PULSE_PROCESSOR_N_SWEEPS = 2
@@ -133,7 +135,7 @@ class PulseProcessor:
     def is_block_pair_good(self, latest: PulseProcessorSweepBlock, storage: PulseProcessorSweepBlock) -> bool:
         if latest.channel != storage.channel:
             return False
-        if math_helper.ts_abs_diff_larger_than(latest.timestamp, storage.timestamp, MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS):
+        if ts_abs_diff_larger_than(latest.timestamp, storage.timestamp, MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS):
             return False
         return True
 
@@ -145,8 +147,8 @@ class PulseProcessor:
             second_offset = latest.offset[i]
             period = CYCLE_PERIODS[channel]
 
-            first_beam = (first_offset * 2 * math_helper.pi / period) - math_helper.pi + math_helper.pi / 3
-            second_beam = (second_offset * 2 * math_helper.pi / period) - math_helper.pi - math_helper.pi / 3
+            first_beam = (first_offset * 2 * math.pi / period) - math.pi + math.pi / 3
+            second_beam = (second_offset * 2 * math.pi / period) - math.pi - math.pi / 3
 
             self.angles.base_station_measurements[channel].sensor_measurements[i].angles[0] = first_beam
             self.angles.base_station_measurements[channel].sensor_measurements[i].angles[1] = second_beam
@@ -179,7 +181,7 @@ class PulseProcessor:
     def process_frame(self, frame_data: PulseProcessorFrame):
         n_of_blocks = 0
 
-        is_first_frame_in_new_workspace = math_helper.ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
+        is_first_frame_in_new_workspace = ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
         if is_first_frame_in_new_workspace:
             n_of_blocks = self.process_workspace()
             self.clear_workspace()
@@ -274,9 +276,9 @@ class PulseProcessor:
             if i == index_with_offset:
                 self.block_workspace.blocks[block_index].offset[sensor] = self.pulse_workspace.slots[block_base_index + i].sensor
             else:
-                timestamp_delta = math_helper.ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + i].timestamp)
-                self.block_workspace.blocks[block_index].offset[sensor] = math_helper.ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].offset, timestamp_delta)
+                timestamp_delta = ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + i].timestamp)
+                self.block_workspace.blocks[block_index].offset[sensor] = ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].offset, timestamp_delta)
 
-        self.block_workspace.blocks[block_index].timestamp = math_helper.ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + index_with_offset].offset)
+        self.block_workspace.blocks[block_index].timestamp = ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + index_with_offset].offset)
 
         return True

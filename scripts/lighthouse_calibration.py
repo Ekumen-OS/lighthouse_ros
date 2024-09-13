@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+import math
 
-import math_helper
+from math_helper import ts_abs_diff_larger_than, ts_diff
 import config
 from ootx_decoder import OOTXDecoder
 from pulse_processor import PulseProcessorFrame
@@ -55,8 +56,8 @@ class LighthouseCalibrator:
         if frame_data.channel_found and frame_data.channel < config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS:
             if frame_data.offset != 0:
                 prev_timestamp0 = self.ootx_timestamps[frame_data.channel]
-                timestamp0 = math_helper.ts_diff(frame_data.timestamp, frame_data.offset)
-                if math_helper.ts_abs_diff_larger_than(timestamp0, prev_timestamp0, MIN_TICKS_BETWEEN_SLOW_BITS):
+                timestamp0 = ts_diff(frame_data.timestamp, frame_data.offset)
+                if ts_abs_diff_larger_than(timestamp0, prev_timestamp0, MIN_TICKS_BETWEEN_SLOW_BITS):
                     is_full_message = self.ootx_decoder[frame_data.channel].ootx_decoder_process_bit(frame_data.slow_bit)
                 self.ootx_timestamps[frame_data.channel] = timestamp0
         # If the OOTX reports to have finished decoding, parse and save the calibration data from it
@@ -127,28 +128,28 @@ class LighthouseCalibrator:
     #     return False
 
     # def ideal_to_distorted(self, ideal: list, calib: LighthouseCalibrationSweep) -> list:
-    #     t30 = math_helper.pi / 6
+    #     t30 = math.pi / 6
     #     tan30 = 0.5773502691896258
 
     #     a1 = ideal[0]
     #     a2 = ideal[1]
 
     #     x = 1.0
-    #     y = math_helper.tan((a2 + a1) / 2.0)
-    #     z = math_helper.sin((a2 - a1) / (tan30 * (math_helper.cos(a2) * math_helper.cos(a1))))
+    #     y = math.tan((a2 + a1) / 2.0)
+    #     z = math.sin((a2 - a1) / (tan30 * (math.cos(a2) * math.cos(a1))))
 
     #     return [self.apply_lh2_model(x, y, z, -t30, calib[0]), self.apply_lh2_model(x, y, z, t30, calib[1])]
 
     # def apply_lh2_model(self, x: float, y: float, z: float, t: float, calib: LighthouseCalibrationSweep) -> float:
-    #     ax = math_helper.atan2(y, x)
-    #     r = math_helper.sqrt(x * x + y * y)
+    #     ax = math.atan2(y, x)
+    #     r = math.sqrt(x * x + y * y)
 
-    #     to_clip = z * math_helper.tan(t - calib.tilt) / r
+    #     to_clip = z * math.tan(t - calib.tilt) / r
     #     if to_clip < -1.0:
     #         to_clip = -1.0
     #     if to_clip > 1.0:
     #         to_clip = 1.0
 
-    #     base = ax + math_helper.asin(to_clip)
-    #     comp_gib = -calib.gibmag * math_helper.cos(ax + calib.gibphase)
+    #     base = ax + math.asin(to_clip)
+    #     comp_gib = -calib.gibmag * math.cos(ax + calib.gibphase)
     #     return base - (calib.phase + comp_gib)
