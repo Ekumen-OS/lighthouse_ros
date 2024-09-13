@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from lighthouse_calibration import LighthouseCalibration, LighthouseCalibrationSweep, apply_lh2_model
+from lighthouse_calibration import LighthouseCalibrationSweep
 import config
 import time
-import math
+import math_helper
 
 # Base stations perform a horizontal and a vertical sweep
 PULSE_PROCESSOR_N_SWEEPS = 2
@@ -11,10 +11,6 @@ PULSE_PROCESSOR_N_SWEEPS = 2
 PULSE_PROCESSOR_N_SENSORS = 4
 
 NO_OFFSET = 0
-PULSE_PROCESSOR_TIMESTAMP_BITWIDTH = 24
-PULSE_PROCESSOR_TIMESTAMP_MAX = ((1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - 1)
-PULSE_PROCESSOR_TIMESTAMP_BITMASK = PULSE_PROCESSOR_TIMESTAMP_MAX
-MIN_TICKS_BETWEEN_SLOW_BITS = int((887000 / 2) * 8 / 10)
 MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = int(10)
 MAX_TICKS_SENSOR_TO_SENSOR = int(10000)
 
@@ -25,12 +21,6 @@ PULSE_PROCESSOR_N_WORKSPACE = (PULSE_PROCESSOR_N_SENSORS * PULSE_PROCESSOR_N_CON
 
 def cycle_period_to_microseconds(cyclePeriod):
     return cyclePeriod / 24
-
-def ts_diff(x, y) -> int:
-  return int((x - y)) & PULSE_PROCESSOR_TIMESTAMP_BITMASK
-
-def ts_abs_diff_larger_than(a, b, limit) -> int:
-    return ts_diff(a + limit, b) > (limit * 2)
 
 @dataclass
 class PulseProcessorFrame:
@@ -111,9 +101,7 @@ class PulseProcessorBlockWorkspace:
         self.blocks = [PulseProcessorSweepBlock()] * PULSE_PROCESSOR_N_CONCURRENT_BLOCKS
 
 class PulseProcessor:
-    def __init__(self, ootx_decoder: list):
-        self.ootx_decoder = ootx_decoder
-        self.base_station_calibration = [LighthouseCalibration()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
+    def __init__(self):
         self.angles = PulseProcessorResult()
         self.received_bs_sweep = [bool] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
@@ -121,24 +109,10 @@ class PulseProcessor:
         self.pulse_workspace = PulseProcessorPulseWorkspace()
         self.block_workspace = PulseProcessorBlockWorkspace()
         self.blocks = PulseProcessorSweepBlock()
-        self.ootx_timestamps = [0] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
     def process_pulse(self, frame_data: PulseProcessorFrame):
-        calib_data_is_decoded = self.handle_calibration_data(frame_data)
         result, base_station, sweep_id = self.handle_angles(frame_data)
-        return result, base_station, sweep_id, calib_data_is_decoded
-
-    def handle_calibration_data(self, frame_data: PulseProcessorFrame) -> bool:
-        is_full_message = False
-
-        if frame_data.channel_found and frame_data.channel < config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS:
-            if frame_data.offset != NO_OFFSET:
-                prev_timestamp0 = self.ootx_timestamps[frame_data.channel]
-                timestamp0 = ts_diff(frame_data.timestamp, frame_data.offset)
-                if ts_abs_diff_larger_than(timestamp0, prev_timestamp0, MIN_TICKS_BETWEEN_SLOW_BITS):
-                    is_full_message = self.ootx_decoder[frame_data.channel].ootx_decoder_process_bit(frame_data.slow_bit)
-                self.ootx_timestamps[frame_data.channel] = timestamp0
-        return is_full_message
+        return result, base_station, sweep_id
 
     def handle_angles(self, frame_data: PulseProcessorFrame):
         # TODO: Disabled, will clear angles after printing them in core
@@ -160,7 +134,7 @@ class PulseProcessor:
     def is_block_pair_good(self, latest: PulseProcessorSweepBlock, storage: PulseProcessorSweepBlock) -> bool:
         if latest.channel != storage.channel:
             return False
-        if ts_abs_diff_larger_than(latest.timestamp, storage.timestamp, MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS):
+        if math_helper.ts_abs_diff_larger_than(latest.timestamp, storage.timestamp, MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS):
             return False
         return True
 
@@ -172,8 +146,8 @@ class PulseProcessor:
             second_offset = latest.offset[i]
             period = CYCLE_PERIODS[channel]
 
-            first_beam = (first_offset * 2 * math.pi / period) - math.pi + math.pi / 3
-            second_beam = (second_offset * 2 * math.pi / period) - math.pi - math.pi / 3
+            first_beam = (first_offset * 2 * math_helper.pi / period) - math_helper.pi + math_helper.pi / 3
+            second_beam = (second_offset * 2 * math_helper.pi / period) - math_helper.pi - math_helper.pi / 3
 
             self.angles.base_station_measurements[channel].sensor_measurements[i].angles[0] = first_beam
             self.angles.base_station_measurements[channel].sensor_measurements[i].angles[1] = second_beam
@@ -206,7 +180,7 @@ class PulseProcessor:
     def process_frame(self, frame_data: PulseProcessorFrame):
         n_of_blocks = 0
 
-        is_first_frame_in_new_workspace = ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
+        is_first_frame_in_new_workspace = math_helper.ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
         if is_first_frame_in_new_workspace:
             n_of_blocks = self.process_workspace()
             self.clear_workspace()
@@ -301,47 +275,9 @@ class PulseProcessor:
             if i == index_with_offset:
                 self.block_workspace.blocks[block_index].offset[sensor] = self.pulse_workspace.slots[block_base_index + i].sensor
             else:
-                timestamp_delta = ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + i].timestamp)
-                self.block_workspace.blocks[block_index].offset[sensor] = ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].offset, timestamp_delta)
+                timestamp_delta = math_helper.ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + i].timestamp)
+                self.block_workspace.blocks[block_index].offset[sensor] = math_helper.ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].offset, timestamp_delta)
 
-        self.block_workspace.blocks[block_index].timestamp = ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + index_with_offset].offset)
+        self.block_workspace.blocks[block_index].timestamp = math_helper.ts_diff(self.pulse_workspace.slots[block_base_index + index_with_offset].timestamp, self.pulse_workspace.slots[block_base_index + index_with_offset].offset)
 
         return True
-
-    def apply_calibration(self, bs: int):
-        """Applies the bs calibration to the measured angles before estimating pos."""
-        do_apply_calibration = self.base_station_calibration[bs].valid
-        if do_apply_calibration:
-            max_delta = 0.0005
-            for sensor in range(PULSE_PROCESSOR_N_SENSORS):
-                if do_apply_calibration:
-                    self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles
-                    # Don't know why 5 times, probably to reach the specified delta
-                    for i in range(5):
-                        current_distorted_angles = self.ideal_to_distorted(self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles, self.base_station_calibration[bs])
-                        delta0 = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles[0] - current_distorted_angles[0]
-                        delta1 = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles[1] - current_distorted_angles[1]
-
-                        self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles[0] += delta0
-                        self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles[1] += delta1
-
-                        if abs(delta0) < max_delta and abs(delta1) < max_delta:
-                            break
-                        print(f'Corrected angles: {self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles}')
-                else:
-                    self.angles.base_station_measurements[bs].sensor_measurements[sensor].corrected_angles = self.angles.base_station_measurements[bs].sensor_measurements[sensor].angles
-            return True
-        return False
-
-    def ideal_to_distorted(self, ideal: list, calib: LighthouseCalibrationSweep) -> list:
-        t30 = math.pi / 6
-        tan30 = 0.5773502691896258
-
-        a1 = ideal[0]
-        a2 = ideal[1]
-
-        x = 1.0
-        y = math.tan((a2 + a1) / 2.0)
-        z = math.sin((a2 - a1) / (tan30 * (math.cos(a2) * math.cos(a1))))
-
-        return [apply_lh2_model(x, y, z, -t30, calib[0]), apply_lh2_model(x, y, z, t30, calib[1])]
