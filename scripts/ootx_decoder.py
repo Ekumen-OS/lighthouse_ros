@@ -4,13 +4,14 @@ import zlib
 
 # Documentation can be found here: https://github.com/nairol/LighthouseRedox/blob/master/docs/Light%20Emissions.md
 
-# Constants
+# The lenght in bytes of the full OOTX data frame. The OOTX data frame contains the cal info (among other things) sent by the base station
 OOTX_MAX_FRAME_LENGTH = 43
 
 def betole (value: int) -> int:
     return ((value & 0xff00) >> 8) | ((value & 0xff) << 8)
 
 class RXState(Enum):
+    """Defines what frame is currently being decoded, following the Light Emissions doc."""
     rxLength = 0
     rxData = 1
     rxCrc0 = 2
@@ -73,12 +74,14 @@ class OOTXDecoder:
         """
         data &= 1
 
+        # Look for the sync frame, which is 17 zeros and a one
         if self.n_zeros == 17 and data == 1:
-            self.synchronized = True
-            self.bit_in_word = 0
-            self.word_received = 0
-            self.is_fully_decoded = False
-            self.rx_state = RXState.rxLength
+            self.synchronized = True    # If sync frame was found
+            self.bit_in_word = 0        # What bit number of the current word we are reading
+            self.word_received = 0      # What byte in the data we are currently filling
+            self.is_fully_decoded = False       # If all data frames where decoded
+            # If sync found, start reading the first frame which is the payload length
+            self.rx_state = RXState.rxLength    # Current frame being read
             return False
         if data == 0:
             self.n_zeros += 1
