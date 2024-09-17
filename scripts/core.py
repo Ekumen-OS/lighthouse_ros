@@ -1,6 +1,5 @@
 # External
 import sys
-import config
 import time
 from smbus2 import SMBus
 

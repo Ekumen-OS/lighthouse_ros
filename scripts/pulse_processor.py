@@ -25,7 +25,7 @@ def cycle_period_to_microseconds(cyclePeriod):
 
 @dataclass
 class PulseProcessorFrame:
-    # Structure definition at https://github.com/bitcraze/lighthouse-fpga
+    """A received frame from the lighthouse deck. Structure definition at https://github.com/bitcraze/lighthouse-fpga."""
     sensor: int
     timestamp: int
     width: int
@@ -47,7 +47,6 @@ class PulseProcessorFrame:
 
 @dataclass
 class PulseProcessorSensorMeasurement:
-    # Angles and corrected angles have the same length, both PULSE_PROCESSOR_N_SWEEPS==2
     angles: list[float]
     corrected_angles: list[float]
     valid_count: int
@@ -102,44 +101,45 @@ class PulseProcessorBlockWorkspace:
         self.blocks = [PulseProcessorSweepBlock()] * PULSE_PROCESSOR_N_CONCURRENT_BLOCKS
 
 class PulseProcessor:
+    """Main processing class that takes the UART frames sent by the deck and calculates the deck angles."""
     def __init__(self):
-        self.angles = PulseProcessorResult()
+        self.angles = PulseProcessorResult() # Main result
         self.received_bs_sweep = [bool] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
-        # pulseProcessorV2 struct
+        # Structures used for the calculations
         self.pulse_workspace = PulseProcessorPulseWorkspace()
         self.block_workspace = PulseProcessorBlockWorkspace()
-        self.blocks = PulseProcessorSweepBlock()
+        self.blocks = [PulseProcessorSweepBlock()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
-    def process_pulse(self, frame_data: PulseProcessorFrame):
-        result, base_station, sweep_id = self.handle_angles(frame_data)
-        return result, base_station, sweep_id
-
-    def handle_angles(self, frame_data: PulseProcessorFrame):
-        # TODO: Disabled, will clear angles after printing them in core
-        # self.clear_stale_angles_after_timeout()
-
-        n_of_blocks = self.process_frame(frame_data)
+    def process_pulse(self, frame_data: PulseProcessorFrame) -> tuple[bool, int, int]:
+        """Main entrypoint for the pulse processor."""
+        angles_measured = False
+        base_station = 0
+        sweep_id = 0
+        n_of_blocks = self.__process_frame(frame_data)
         for i in range(n_of_blocks):
             block = self.block_workspace.blocks[i]
             channel = block.channel
             if channel < config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS:
-                previous_block = self.block_workspace.blocks[channel]
-                if self.is_block_pair_good(block, previous_block):
-                    self.calculate_angles(block, previous_block)
-                    return True, channel, 1
+                if self.__is_block_pair_good(block, self.blocks[channel]):
+                    self.__calculate_angles(block, self.blocks[channel])
+                    angles_measured = True
+                    base_station = channel
+                    sweep_id = 1
                 else:
                     self.blocks[channel] = self.block_workspace.blocks[i]
-        return False, 0, 0
+        return angles_measured, base_station, sweep_id
 
-    def is_block_pair_good(self, latest: PulseProcessorSweepBlock, storage: PulseProcessorSweepBlock) -> bool:
+    def __is_block_pair_good(self, latest: PulseProcessorSweepBlock, storage: PulseProcessorSweepBlock) -> bool:
+        """Checks if the sweeps belong to the same channel and are not far enough timewise."""
         if latest.channel != storage.channel:
             return False
         if ts_abs_diff_larger_than(latest.timestamp, storage.timestamp, MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS):
             return False
         return True
 
-    def calculate_angles(self, latest: PulseProcessorSweepBlock, previous: PulseProcessorSweepBlock):
+    def __calculate_angles(self, latest: PulseProcessorSweepBlock, previous: PulseProcessorSweepBlock) -> None:
+        """Calculates the angles from the sweep blocks."""
         channel = latest.channel
 
         for i in range(PULSE_PROCESSOR_N_SENSORS):
@@ -154,13 +154,6 @@ class PulseProcessor:
             self.angles.base_station_measurements[channel].sensor_measurements[i].angles[1] = second_beam
             self.angles.base_station_measurements[channel].sensor_measurements[i].valid_count = 2
         self.angles.last_usec_timestamp[channel] = round(time.time() * 1000)  # TODO: This should be usec
-
-    def clear_stale_angles_after_timeout(self):
-        current_time_us = round(time.time() * 1000) # TODO: This should be usec
-        for i in range(config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS):
-            elapsed_time_ms = current_time_us - self.angles.last_usec_timestamp[i]
-            if elapsed_time_ms > cycle_period_to_microseconds(CYCLE_PERIODS[i]):
-                self.pulse_processor_clear(i)
 
     def clear_stale_angles(self):
         for i in range(config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS):
@@ -178,36 +171,36 @@ class PulseProcessor:
         for j in range(PULSE_PROCESSOR_N_SENSORS):
             self.angles.base_station_measurements[i].sensor_measurements[j].valid_count = 0
 
-    def process_frame(self, frame_data: PulseProcessorFrame):
+    def __process_frame(self, frame_data: PulseProcessorFrame):
         n_of_blocks = 0
 
         is_first_frame_in_new_workspace = ts_abs_diff_larger_than(frame_data.timestamp, self.pulse_workspace.latest_timestamp, MAX_TICKS_SENSOR_TO_SENSOR)
         if is_first_frame_in_new_workspace:
-            n_of_blocks = self.process_workspace()
-            self.clear_workspace()
+            n_of_blocks = self.__process_workspace()
+            self.__clear_workspace()
 
         # Not needed with the new approach
         self.pulse_workspace.latest_timestamp = frame_data.timestamp
 
-        if not self.store_pulse(frame_data):
-            self.clear_workspace()
+        if not self.__store_pulse(frame_data):
+            self.__clear_workspace()
         return n_of_blocks
 
-    def clear_workspace(self):
+    def __clear_workspace(self):
         self.pulse_workspace.slots_used = 0
 
-    def store_pulse(self, frame_data: PulseProcessorFrame):
+    def __store_pulse(self, frame_data: PulseProcessorFrame):
         if self.pulse_workspace.slots_used < PULSE_PROCESSOR_N_WORKSPACE:
             self.pulse_workspace.slots[self.pulse_workspace.slots_used] = frame_data
             self.pulse_workspace.slots_used += 1
             return True
         return False
 
-    def process_workspace(self) -> int:
+    def __process_workspace(self) -> int:
         # In case a frame or frames in the workspace did not arrive with a channel (basestation ID),
         # look for the frame that does have a channel and assign that to the other frames in the block workspace.
         # We tecnically do not need this as we hardcode all channels to 0.
-        self.augment_frames_in_workspace()
+        self.__augment_frames_in_workspace()
 
         slots_used = self.pulse_workspace.slots_used
         if slots_used < PULSE_PROCESSOR_N_SENSORS:
@@ -217,11 +210,11 @@ class PulseProcessor:
         blocks_in_workspace = int(slots_used / PULSE_PROCESSOR_N_SENSORS)
         for block_index in range(blocks_in_workspace):
             block_base_index = block_index * PULSE_PROCESSOR_N_SENSORS
-            if not self.process_workspace_block(block_base_index, block_index):
+            if not self.__process_workspace_block(block_base_index, block_index):
                 return 0
         return blocks_in_workspace
 
-    def augment_frames_in_workspace(self):
+    def __augment_frames_in_workspace(self):
         slots_used = self.pulse_workspace.slots_used
         channel_is_known = False
         channel = 0
@@ -235,7 +228,7 @@ class PulseProcessor:
                     self.pulse_workspace.slots[i].channel = channel
                     self.pulse_workspace.slots[i].channel_found = True
 
-    def process_workspace_block(self, block_base_index: int, block_index: int) -> bool:
+    def __process_workspace_block(self, block_base_index: int, block_index: int) -> bool:
         sensor_mask = 0
         NO_SENSOR = -1
         NO_OFFSET = 0
@@ -258,7 +251,7 @@ class PulseProcessor:
         if self.block_workspace.blocks[block_index].channel == NO_CHANNEL:
             return False
 
-        # Only one sensor should have offset?? Not happening in testing
+        # Check one sensor only has offset
         index_with_offset = NO_SENSOR
         for i in range(PULSE_PROCESSOR_N_SENSORS):
             if self.pulse_workspace.slots[block_base_index + i].offset != NO_OFFSET:
