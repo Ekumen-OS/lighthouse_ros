@@ -65,17 +65,22 @@ class LighthouseCore:
             self.pulse_processor.clear_stale_angles()
 
     def use_pulse_result(self, base_station: int, sweep_id: int):
-        # if sweep_id == 1:
-        #     if self.lighthouse_calibrator.apply_calibration(base_station):
-        #         # TODO: Firmware here throttles V2 samples, needed?
-        #         # self.throttle()
-        #         self.pulse_processor.clear_outdated(base_station)
-        #         # Do the pose estimation. We would pass the bs geometry here if we had one
-        #         # self.pose_estimator.estimate_pose_sweeps(self.pulse_processor.base_station_calibration[base_station], self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements)
-        #         # Clear angles after using them to estimate position
-        #         self.pulse_processor.clear_stale_angles()
-        # TODO
-        print ("Using pulse result... Code it in")
+        if sweep_id == 1:
+            calibration_applied, corrected_angles = self.lighthouse_calibrator.apply_calibration(base_station, self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements)
+            if calibration_applied:
+                for sensor in range(4):
+                    self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements[sensor].corrected_angles = corrected_angles[sensor]
+
+                # TODO: Firmware here throttles V2 samples, needed?
+                # self.throttle()
+
+                self.pulse_processor.clear_outdated(base_station)
+
+                # TODO: Send angles to estimator
+                # 
+
+                # Clear angles after using them to estimate position
+                self.pulse_processor.clear_stale_angles()
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
