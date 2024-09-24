@@ -79,6 +79,8 @@ class OOTXDecoder:
         # Look for the sync frame, which is 17 zeros and a one
         if self.n_zeros == 17 and data == 1:
             self.synchronized = True    # If sync frame was found
+            self.current_word.clear()
+            self.data.clear()
             self.is_fully_decoded = False       # If all data frames where decoded
             # If sync found, start reading the first frame which is the payload length
             self.rx_state = RXState.rxLength    # Current frame being read
@@ -94,6 +96,7 @@ class OOTXDecoder:
                     self.synchronized = False
                     self.is_fully_decoded = False
                     return False
+                self.current_word.clear()
                 if self.rx_state == RXState.rxDone:
                     is_data_valid = self.check_crc()
                     self.is_fully_decoded = is_data_valid
@@ -103,6 +106,7 @@ class OOTXDecoder:
                 else:
                     self.is_fully_decoded = False
                     return False
+
             self.current_word.append(data)
             if len(self.current_word) == 16:
                 match self.rx_state:
