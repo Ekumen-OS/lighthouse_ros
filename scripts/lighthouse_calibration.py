@@ -80,8 +80,6 @@ class LighthouseCalibrator:
 
     def lighthouse_calibration_init_from_frame(self, bs: int) -> LighthouseCalibration:
         """Parses the OOTX data into a calibration frame and returns it."""
-        # TODO: ootx decoder 'frame' does not contain info, it needs to be parsed from 'data'
-        # This is a shortcoming of Python vs C as in C they used a struct union to fill in 'frame' as they parsed 'data'
         new_cal_data = LighthouseCalibration()
         new_cal_data.sweep[0].phase = self.ootx_decoder[bs].frame.phase0
         new_cal_data.sweep[0].tilt = self.ootx_decoder[bs].frame.tilt0
