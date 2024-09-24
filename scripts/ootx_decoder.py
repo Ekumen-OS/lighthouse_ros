@@ -49,7 +49,7 @@ class OOTXDataFrame:
     ogeephase1: float = 0.0
     ogeemag0: float = 0.0
     ogeemag1: float = 0.0
-    DECODING_FORMAT: str = ">hieeeebbeebbbeeeebb"
+    DECODING_FORMAT: str = ">HHLeeeeBBeebbbeeeeBB"
 
 class OOTXDecoder:
     """Class in charge of receiving the bs calibration slow bits and decoding them."""
@@ -122,10 +122,10 @@ class OOTXDecoder:
                         if 2 * len(self.data) >= self.frame_length:
                             self.rx_state = RXState.rxCrc0
                     case RXState.rxCrc0:
-                        self.crc32 = struct.unpack("<h", self.current_word.tobytes())[0]
+                        self.crc32 = struct.unpack("<H", self.current_word.tobytes())[0]
                         self.rx_state = RXState.rxCrc1
                     case RXState.rxCrc1:
-                        self.crc32 |= (struct.unpack("<h", self.current_word.tobytes())[0] << 16)
+                        self.crc32 |= (struct.unpack("<H", self.current_word.tobytes())[0] << 16)
                         self.rx_state = RXState.rxDone
                     case RXState.rxDone:
                         pass
