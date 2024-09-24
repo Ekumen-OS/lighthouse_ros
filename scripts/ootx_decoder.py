@@ -49,7 +49,7 @@ class OOTXDataFrame:
     ogeephase1: float = 0.0
     ogeemag0: float = 0.0
     ogeemag1: float = 0.0
-    DECODING_FORMAT: str = ">HHLeeeeBBeebbbeeeeBB"
+    DECODING_FORMAT: str = ">HHLeeeeBBeebbbeeeeBBeeee"
 
 class OOTXDecoder:
     """Class in charge of receiving the bs calibration slow bits and decoding them."""
