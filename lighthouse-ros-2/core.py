@@ -1,5 +1,4 @@
 # External
-import sys
 import time
 from smbus2 import SMBus
 
@@ -14,7 +13,7 @@ from serial_handler import SerialHandler, LighthouseUartFrame
 # Send byte words with: printf '%b' 'bytes' > /dev/pts/...
 
 class LighthouseCore:
-    def __init__(self, serial_handler: SerialHandler):
+    def __init__(self, serial_handler: SerialHandler, publisher):
         # Class variables
         self.pulse_processor = PulseProcessor()
         self.serial_handler = serial_handler
@@ -83,11 +82,3 @@ class LighthouseCore:
 
                 # Clear angles after using them to estimate position
                 self.pulse_processor.clear_stale_angles()
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: {} <input.bin or /dev/tty...>".format(sys.argv[0]))
-        exit(1)
-
-    serial_handler = SerialHandler(sys.argv[1])
-    lighthouse_core = LighthouseCore(serial_handler)
