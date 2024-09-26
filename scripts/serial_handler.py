@@ -39,7 +39,7 @@ class SerialHandler:
         sync = (sync_counter == UART_FRAME_LENGTH)
     print("Found sync!")
 
-  def get_uart_frame_raw(self) -> tuple:
+  def get_uart_frame_raw(self) -> tuple[bool, LighthouseUartFrame]:
     """Reads a frame from the serial port and parses it to fill a lighthouse UART frame."""
     reading = self.src.read(UART_FRAME_LENGTH)
 
