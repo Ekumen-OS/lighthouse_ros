@@ -49,7 +49,9 @@ class LighthouseCore:
                 if self.lighthouse_calibrator.all_calibrations_decoded():
                     self.process_frames(lighthouse_uart_frame)
                 else:
-                    self.lighthouse_calibrator.handle_calibration_data(lighthouse_uart_frame.data)
+                    # TODO: Calibration disabled until further notice
+                    print("Calibration temporarily disabled")
+                    # self.lighthouse_calibrator.handle_calibration_data(lighthouse_uart_frame.data)
 
                 previous_was_sync_frame = lighthouse_uart_frame.is_sync_frame
 
