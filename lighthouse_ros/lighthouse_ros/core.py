@@ -3,9 +3,9 @@ import time
 from smbus2 import SMBus
 
 # Internal
-from pulse_processor import PulseProcessor
-from lighthouse_calibration import LighthouseCalibrator
-from serial_handler import SerialHandler, LighthouseUartFrame
+from lighthouse_ros.pulse_processor import PulseProcessor
+from lighthouse_ros.lighthouse_calibration import LighthouseCalibrator
+from lighthouse_ros.serial_handler import SerialHandler, LighthouseUartFrame
 
 # Hand testing:
 # Create a virtual serial in one terminal: socat -d -d pty,raw,echo=0 pty,raw,echo=0

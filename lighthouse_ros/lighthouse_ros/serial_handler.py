@@ -2,7 +2,7 @@ from serial import Serial
 from dataclasses import dataclass
 import struct
 
-from pulse_processor import PulseProcessorFrame
+from lighthouse_ros.pulse_processor import PulseProcessorFrame
 
 # Length of the received uart frame from the base station
 UART_FRAME_LENGTH = 12

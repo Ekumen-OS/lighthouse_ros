@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-import config
 import time
 import math
 
-from math_helper import ts_abs_diff_larger_than, ts_diff
+import lighthouse_ros.config as config
+from lighthouse_ros.math_helper import ts_abs_diff_larger_than, ts_diff
 
 # Base stations perform a horizontal and a vertical sweep
 PULSE_PROCESSOR_N_SWEEPS = 2
