@@ -28,7 +28,7 @@ class LighthouseNode(Node):
             logger.fatal("Could not open serial port")
             raise e
 
-        self._core = LighthouseCore(serial_handler, publisher)
+        self._core = LighthouseCore(serial_handler, publisher, logger)
 
 
 def main(args=None):

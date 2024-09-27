@@ -13,11 +13,12 @@ from lighthouse_ros.serial_handler import SerialHandler, LighthouseUartFrame
 # Send byte words with: printf '%b' 'bytes' > /dev/pts/...
 
 class LighthouseCore:
-    def __init__(self, serial_handler: SerialHandler, publisher):
+    def __init__(self, serial_handler: SerialHandler, publisher, logger):
         # Class variables
         self.pulse_processor = PulseProcessor()
         self.serial_handler = serial_handler
         self.lighthouse_calibrator = LighthouseCalibrator()
+        self.logger = logger
 
         try:
             # Write a 0 to get out of the bootloader mode and start receiving data via UART
@@ -62,7 +63,7 @@ class LighthouseCore:
         if result:
             self.use_pulse_result(base_station, sweep_id)
             # DEBUG print
-            # print(f'Angles: {self.pulse_processor.angles.base_station_measurements[0].sensor_measurements[0].angles}')
+            # self.logger.info(f'Angles: {self.pulse_processor.angles.base_station_measurements[0].sensor_measurements[0].angles}')
             self.pulse_processor.clear_stale_angles()
 
     def use_pulse_result(self, base_station: int, sweep_id: int):
