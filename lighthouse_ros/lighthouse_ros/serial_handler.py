@@ -9,12 +9,8 @@ UART_FRAME_LENGTH = 12
 
 @dataclass
 class LighthouseUartFrame:
-    data: PulseProcessorFrame
-    is_sync_frame: bool
-
-    def __init__(self):
-        self.data = PulseProcessorFrame()
-        self.is_sync_frame = False
+    data: PulseProcessorFrame = PulseProcessorFrame()
+    is_sync_frame: bool = False
 
 class SerialHandler:
   """Class to handle serial reading and parsing."""
