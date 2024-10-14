@@ -6,6 +6,7 @@ from smbus2 import SMBus
 from lighthouse_ros.pulse_processor import PulseProcessor
 from lighthouse_ros.lighthouse_calibration import LighthouseCalibrator
 from lighthouse_ros.serial_handler import SerialHandler, LighthouseUartFrame
+from lighthouse_ros_msgs.msg import SensorMeasurements
 
 # Hand testing:
 # Create a virtual serial in one terminal: socat -d -d pty,raw,echo=0 pty,raw,echo=0
@@ -78,8 +79,12 @@ class LighthouseCore:
 
                 self.pulse_processor.clear_outdated(base_station)
 
-                # TODO: Send angles to estimator
-                # 
+                # Send angles to estimator
+                sensor_measurement_angle_msg = SensorMeasurements()
+                sensor_measurement_angle_msg.base_station_id = base_station
+                for sensor in range(4):
+                    sensor_measurement_angle_msg.sensor_angles[sensor].angles = self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements[sensor].corrected_angles
+                self.publisher.publish(sensor_measurement_angle_msg)
 
                 # Clear angles after using them to estimate position
                 self.pulse_processor.clear_stale_angles()
