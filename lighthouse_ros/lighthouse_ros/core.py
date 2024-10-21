@@ -19,6 +19,7 @@ class LighthouseCore:
         self.pulse_processor = PulseProcessor()
         self.serial_handler = serial_handler
         self.lighthouse_calibrator = LighthouseCalibrator()
+        self.publisher = publisher
         self.logger = logger
 
         try:
@@ -28,7 +29,7 @@ class LighthouseCore:
             time.sleep(1)
             var = bus.write_byte_data(i2c_address, 0, 0)
         except:
-            print("Out of bootloader mode")
+            self.logger.info("Out of bootloader mode")
 
         # Start the infinite position estimation loop
         self.core_task()
@@ -51,7 +52,7 @@ class LighthouseCore:
                     self.process_frames(lighthouse_uart_frame)
                 else:
                     # TODO: Calibration disabled until further notice
-                    print("Calibration temporarily disabled")
+                    self.logger.warn("Calibration temporarily disabled")
                     # self.lighthouse_calibrator.handle_calibration_data(lighthouse_uart_frame.data)
 
                 previous_was_sync_frame = lighthouse_uart_frame.is_sync_frame

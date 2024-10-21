@@ -23,12 +23,15 @@ class LighthouseNode(Node):
             logger.fatal("Serial port argument is required")
             raise RuntimeError
         try:
-            serial_handler = SerialHandler(serial_port)
+            serial_handler = SerialHandler(serial_port, logger)
         except (SerialException, FileNotFoundError) as e:
             logger.fatal("Could not open serial port")
             raise e
 
-        self._core = LighthouseCore(serial_handler, publisher, logger)
+        try:
+            self._core = LighthouseCore(serial_handler, publisher, logger)
+        except Exception as e:
+            raise e
 
 
 def main(args=None):

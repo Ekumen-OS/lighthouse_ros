@@ -108,7 +108,6 @@ class LighthouseCalibrator:
 
                         if abs(delta0) < max_delta and abs(delta1) < max_delta:
                             break
-                        print(f'Corrected angles: {corrected_angles[sensor]}')
                 else:
                     corrected_angles[sensor] = bs_sensor_measurements[sensor].angles
             return True, corrected_angles
