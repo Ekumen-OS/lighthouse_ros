@@ -68,7 +68,8 @@ class PulseProcessorBlockWorkspace:
 
 class PulseProcessor:
     """Main processing class that takes the UART frames sent by the deck and calculates the deck angles."""
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         self.angles = PulseProcessorResult() # Main result
         self.received_bs_sweep = [bool] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 

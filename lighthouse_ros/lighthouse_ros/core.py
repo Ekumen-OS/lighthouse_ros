@@ -16,7 +16,7 @@ from lighthouse_ros_msgs.msg import SensorMeasurements
 class LighthouseCore:
     def __init__(self, serial_handler: SerialHandler, publisher, logger):
         # Class variables
-        self.pulse_processor = PulseProcessor()
+        self.pulse_processor = PulseProcessor(logger)
         self.serial_handler = serial_handler
         self.lighthouse_calibrator = LighthouseCalibrator()
         self.publisher = publisher
