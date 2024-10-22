@@ -26,45 +26,79 @@ def cycle_period_to_microseconds(cyclePeriod):
 @dataclass
 class PulseProcessorFrame:
     """A received frame from the lighthouse deck. Structure definition at https://github.com/bitcraze/lighthouse-fpga."""
-    sensor: int = 0
-    timestamp: int = 0
-    width: int = 0
-    beam_data: int = 0
-    offset: int = 0
-    channel: int = 0
-    slow_bit: int = 0
-    channel_found: bool = False
+    sensor: int
+    timestamp: int
+    width: int
+    beam_data: int
+    offset: int
+    channel: int
+    slow_bit: int
+    channel_found: bool
+
+    def __init__(self):
+        self.sensor = 0
+        self.timestamp = 0
+        self.width = 0
+        self.beam_data = 0
+        self.offset = 0
+        self.channel = 0
+        self.slow_bit = 0
+        self.channel_found = False
 
 @dataclass
 class PulseProcessorSensorMeasurement:
-    angles: list[float] = field(default_factory=lambda: [0.0 for i in range(PULSE_PROCESSOR_N_SWEEPS)])
-    corrected_angles: list[float] = field(default_factory=lambda: [0.0 for i in range(PULSE_PROCESSOR_N_SWEEPS)])
-    valid_count: int = 0
+    angles: list[float]
+    corrected_angles: list[float]
+    valid_count: int
+
+    def __init__(self):
+        self.angles = [0.0] * PULSE_PROCESSOR_N_SWEEPS
+        self.corrected_angles = [0.0] * PULSE_PROCESSOR_N_SWEEPS
 
 @dataclass
 class PulseProcessorBaseStationMeasurement:
-    sensor_measurements: list[PulseProcessorSensorMeasurement] = field(default_factory=lambda: [PulseProcessorSensorMeasurement() for i in range(PULSE_PROCESSOR_N_SENSORS)])
+    sensor_measurements: list[PulseProcessorSensorMeasurement]
+
+    def __init__(self):
+        self.sensor_measurements = [PulseProcessorSensorMeasurement()] * PULSE_PROCESSOR_N_SENSORS
 
 @dataclass
 class PulseProcessorResult:
-    base_station_measurements: list[PulseProcessorBaseStationMeasurement] = field(default_factory=lambda: [PulseProcessorBaseStationMeasurement() for i in range(config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS)])
-    last_usec_timestamp: list[int] = field(default_factory=lambda: [0 for i in range(config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS)])
+    base_station_measurements: list[PulseProcessorBaseStationMeasurement]
+    last_usec_timestamp: list[int]
+
+    def __init__(self):
+        self.base_station_measurements = [PulseProcessorBaseStationMeasurement()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
+        self.last_usec_timestamp = [0] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
 @dataclass
 class PulseProcessorPulseWorkspace:
-    slots_used: int = 0
-    latest_timestamp: int = 0
-    slots: list[PulseProcessorFrame] = field(default_factory=lambda: [PulseProcessorFrame() for i in range(PULSE_PROCESSOR_N_WORKSPACE)])
+    slots_used: int
+    latest_timestamp: int
+    slots: list[PulseProcessorFrame]
+
+    def __init__(self):
+        self.slots_used = 0
+        self.latest_timestamp = 0
+        self.slots = [PulseProcessorFrame()] * PULSE_PROCESSOR_N_WORKSPACE
 
 @dataclass
 class PulseProcessorSweepBlock:
-    offset: list[int] = field(default_factory=lambda: [0 for i in range(PULSE_PROCESSOR_N_SENSORS)])
-    timestamp: int = 0
-    channel: int = 0
+    offset: list[int]
+    timestamp: int
+    channel: int
+
+    def __init__(self):
+        self.offset = [0] * PULSE_PROCESSOR_N_SENSORS
+        self.timestamp = 0
+        self.channel = 0
 
 @dataclass
 class PulseProcessorBlockWorkspace:
-    blocks: list[PulseProcessorSweepBlock] = field(default_factory=lambda: [PulseProcessorSweepBlock() for i in range(PULSE_PROCESSOR_N_CONCURRENT_BLOCKS)])
+    blocks: list[PulseProcessorSweepBlock]
+
+    def __init__(self):
+        self.blocks = [PulseProcessorSweepBlock()] * PULSE_PROCESSOR_N_CONCURRENT_BLOCKS
 
 class PulseProcessor:
     """Main processing class that takes the UART frames sent by the deck and calculates the deck angles."""
