@@ -16,7 +16,9 @@ def generate_launch_description():
         Node(
             package='lighthouse_ros',
             namespace='',
+            output='screen',
             executable='lighthouse_ros',
+            arguments=['--ros-args', '--log-level', 'INFO'],
             parameters=[
                 {
                     "serial_port": serial_port

@@ -24,7 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'lighthouse_ros = lighthouse_ros.lighthouse_ros_node:main'
+            'lighthouse_ros = lighthouse_ros.node:main'
         ],
     },
 )
