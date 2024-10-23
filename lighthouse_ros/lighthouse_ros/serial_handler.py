@@ -2,23 +2,20 @@ from serial import Serial
 from dataclasses import dataclass
 import struct
 
-from pulse_processor import PulseProcessorFrame
+from lighthouse_ros.pulse_processor import PulseProcessorFrame
 
 # Length of the received uart frame from the base station
 UART_FRAME_LENGTH = 12
 
 @dataclass
 class LighthouseUartFrame:
-    data: PulseProcessorFrame
-    is_sync_frame: bool
-
-    def __init__(self):
-        self.data = PulseProcessorFrame()
-        self.is_sync_frame = False
+    data: PulseProcessorFrame = PulseProcessorFrame()
+    is_sync_frame: bool = False
 
 class SerialHandler:
   """Class to handle serial reading and parsing."""
-  def __init__(self, port: str) -> None:
+  def __init__(self, port: str, logger) -> None:
+    self.logger = logger
     """Initializes the serial port."""
     if port.startswith("/dev/"):
         self.src = Serial(port, 2*115200)
@@ -27,7 +24,7 @@ class SerialHandler:
 
   def wait_for_sync(self) -> None:
     """Waits for the sync frame coming from the deck."""
-    print("Waiting for sync ...")
+    self.logger.info("Waiting for sync ...")
     sync = False
     sync_counter = 0
     while not sync:
@@ -37,7 +34,7 @@ class SerialHandler:
         else:
             sync_counter = 0
         sync = (sync_counter == UART_FRAME_LENGTH)
-    print("Found sync!")
+    self.logger.info("Found sync!")
 
   def get_uart_frame_raw(self) -> tuple[bool, LighthouseUartFrame]:
     """Reads a frame from the serial port and parses it to fill a lighthouse UART frame."""

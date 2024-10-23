@@ -1,44 +1,30 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import math
 
-from math_helper import ts_abs_diff_larger_than, ts_diff
-import config
-from ootx_decoder import OOTXDecoder
-from pulse_processor import PulseProcessorFrame, PulseProcessorSensorMeasurement, PULSE_PROCESSOR_N_SENSORS, PULSE_PROCESSOR_N_SWEEPS
+import lighthouse_ros.config as config
+from lighthouse_ros.math_helper import ts_abs_diff_larger_than, ts_diff
+from lighthouse_ros.ootx_decoder import OOTXDecoder
+from lighthouse_ros.pulse_processor import PulseProcessorFrame, PulseProcessorSensorMeasurement, PULSE_PROCESSOR_N_SENSORS, PULSE_PROCESSOR_N_SWEEPS
 
 MIN_TICKS_BETWEEN_SLOW_BITS = int((887000 / 2) * 8 / 10)
 
 @dataclass
 class LighthouseCalibrationSweep:
     """Struct containing the calibration values."""
-    phase: float
-    tilt: float
-    curve: float
-    gibmag: float
-    gibphase: float
-    ogeemag: float
-    ogeephase: float
-
-    def __init__(self):
-        self.phase = 0.0
-        self.tilt = 0.0
-        self.curve = 0.0
-        self.gibmag = 0.0
-        self.giphase = 0.0
-        self.ogeemag = 0.0
-        self. ogeephase = 0.0
+    phase: float = 0.0
+    tilt: float = 0.0
+    curve: float = 0.0
+    gibmag: float = 0.0
+    gibphase: float = 0.0
+    ogeemag: float = 0.0
+    ogeephase: float = 0.0
 
 @dataclass
 class LighthouseCalibration:
     """Struct containing the intrinsic calibration for a base station."""
-    uid: int        # The base station ID
-    valid: bool     # If the stored calibration is valid or not
-    sweep: list[LighthouseCalibrationSweep] # The actual calibration data
-
-    def __init__(self):
-        self.uid = 0
-        self.valid = False
-        self.sweep = [LighthouseCalibrationSweep()] * 2
+    uid: int = 0        # The base station ID
+    valid: bool = False     # If the stored calibration is valid or not
+    sweep: list[LighthouseCalibrationSweep] = field(default_factory=lambda: [LighthouseCalibrationSweep() for i in range(2)]) # The actual calibration data
 
 class LighthouseCalibrator:
     """Class in charge of handling base station intrinsic calibrations."""
@@ -122,7 +108,6 @@ class LighthouseCalibrator:
 
                         if abs(delta0) < max_delta and abs(delta1) < max_delta:
                             break
-                        print(f'Corrected angles: {corrected_angles[sensor]}')
                 else:
                     corrected_angles[sensor] = bs_sensor_measurements[sensor].angles
             return True, corrected_angles

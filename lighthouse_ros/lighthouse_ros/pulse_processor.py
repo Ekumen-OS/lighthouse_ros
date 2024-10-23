@@ -1,9 +1,9 @@
-from dataclasses import dataclass
-import config
+from dataclasses import dataclass, field
 import time
 import math
 
-from math_helper import ts_abs_diff_larger_than, ts_diff
+import lighthouse_ros.config as config
+from lighthouse_ros.math_helper import ts_abs_diff_larger_than, ts_diff
 
 # Base stations perform a horizontal and a vertical sweep
 PULSE_PROCESSOR_N_SWEEPS = 2
@@ -68,7 +68,8 @@ class PulseProcessorBlockWorkspace:
 
 class PulseProcessor:
     """Main processing class that takes the UART frames sent by the deck and calculates the deck angles."""
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         self.angles = PulseProcessorResult() # Main result
         self.received_bs_sweep = [bool] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
