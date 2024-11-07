@@ -1,12 +1,12 @@
 # External
-import sys
 import time
 from smbus2 import SMBus
 
 # Internal
-from pulse_processor import PulseProcessor
-from lighthouse_calibration import LighthouseCalibrator
-from serial_handler import SerialHandler, LighthouseUartFrame
+from lighthouse_ros.pulse_processor import PulseProcessor
+from lighthouse_ros.calibration import LighthouseCalibrator
+from lighthouse_ros.serial_handler import SerialHandler, LighthouseUartFrame
+from lighthouse_ros_msgs.msg import SensorMeasurements
 
 # Hand testing:
 # Create a virtual serial in one terminal: socat -d -d pty,raw,echo=0 pty,raw,echo=0
@@ -14,11 +14,13 @@ from serial_handler import SerialHandler, LighthouseUartFrame
 # Send byte words with: printf '%b' 'bytes' > /dev/pts/...
 
 class LighthouseCore:
-    def __init__(self, serial_handler: SerialHandler):
+    def __init__(self, serial_handler: SerialHandler, publisher, logger):
         # Class variables
-        self.pulse_processor = PulseProcessor()
+        self.pulse_processor = PulseProcessor(logger)
         self.serial_handler = serial_handler
         self.lighthouse_calibrator = LighthouseCalibrator()
+        self.publisher = publisher
+        self.logger = logger
 
         try:
             # Write a 0 to get out of the bootloader mode and start receiving data via UART
@@ -27,7 +29,7 @@ class LighthouseCore:
             time.sleep(1)
             var = bus.write_byte_data(i2c_address, 0, 0)
         except:
-            print("Out of bootloader mode")
+            self.logger.info("Out of bootloader mode")
 
         # Start the infinite position estimation loop
         self.core_task()
@@ -63,7 +65,7 @@ class LighthouseCore:
         if result:
             self.use_pulse_result(base_station, sweep_id)
             # DEBUG print
-            # print(f'Angles: {self.pulse_processor.angles.base_station_measurements[0].sensor_measurements[0].angles}')
+            # self.logger.info(f'Angles: {self.pulse_processor.angles.base_station_measurements[0].sensor_measurements[0].angles}')
             self.pulse_processor.clear_stale_angles()
 
     def use_pulse_result(self, base_station: int, sweep_id: int):
@@ -78,16 +80,12 @@ class LighthouseCore:
 
                 self.pulse_processor.clear_outdated(base_station)
 
-                # TODO: Send angles to estimator
-                # 
+                # Send angles to estimator
+                sensor_measurement_angle_msg = SensorMeasurements()
+                sensor_measurement_angle_msg.base_station_id = base_station
+                for sensor in range(4):
+                    sensor_measurement_angle_msg.sensor_angles[sensor].angles = self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements[sensor].corrected_angles
+                self.publisher.publish(sensor_measurement_angle_msg)
 
                 # Clear angles after using them to estimate position
                 self.pulse_processor.clear_stale_angles()
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: {} <input.bin or /dev/tty...>".format(sys.argv[0]))
-        exit(1)
-
-    serial_handler = SerialHandler(sys.argv[1])
-    lighthouse_core = LighthouseCore(serial_handler)
