@@ -70,8 +70,7 @@ class LighthouseCore:
 
     def use_pulse_result(self, base_station: int, sweep_id: int):
         if sweep_id == 1:
-            # calibration_applied, corrected_angles = self.lighthouse_calibrator.apply_calibration(base_station, self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements)
-            calibration_applied = True
+            calibration_applied, corrected_angles = self.lighthouse_calibrator.apply_calibration(base_station, self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements)
             if calibration_applied:
                 for sensor in range(4):
                     self.pulse_processor.angles.base_station_measurements[base_station].sensor_measurements[sensor].corrected_angles = corrected_angles[sensor]
