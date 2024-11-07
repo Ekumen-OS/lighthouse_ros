@@ -111,11 +111,6 @@ class LighthouseCalibrator:
                 else:
                     corrected_angles[sensor] = bs_sensor_measurements[sensor].angles
             return True, corrected_angles
-        # TODO: Remove this 'else' once calibration is correctly working
-        else:
-            for sensor in range(PULSE_PROCESSOR_N_SENSORS):
-                corrected_angles[sensor] = bs_sensor_measurements[sensor].angles
-            return True, corrected_angles
         return False, corrected_angles
 
     def ideal_to_distorted(self, ideal: list, calib: LighthouseCalibrationSweep) -> list:
