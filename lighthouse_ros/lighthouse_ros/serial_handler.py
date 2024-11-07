@@ -1,5 +1,5 @@
 from serial import Serial
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import struct
 
 from lighthouse_ros.pulse_processor import PulseProcessorFrame
@@ -9,7 +9,7 @@ UART_FRAME_LENGTH = 12
 
 @dataclass
 class LighthouseUartFrame:
-    data: PulseProcessorFrame = PulseProcessorFrame()
+    data: PulseProcessorFrame = field(default_factory=lambda: PulseProcessorFrame())
     is_sync_frame: bool = False
 
 class SerialHandler:
@@ -47,9 +47,6 @@ class SerialHandler:
         lighthouse_uart_frame.is_sync_frame = True
     else:
         lighthouse_uart_frame.is_sync_frame = False
-
-    # Unpack
-    lighthouse_uart_frame = LighthouseUartFrame()
 
     lighthouse_uart_frame.data.timestamp = struct.unpack("<I", reading[9:] + b'\x00')[0]
     lighthouse_uart_frame.data.beam_data = struct.unpack("<I", reading[6:9] + b'\x00')[0]
