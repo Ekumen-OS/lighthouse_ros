@@ -38,32 +38,46 @@ class SerialHandler:
 
   def get_uart_frame_raw(self) -> tuple[bool, LighthouseUartFrame]:
     """Reads a frame from the serial port and parses it to fill a lighthouse UART frame."""
-    reading = self.src.read(UART_FRAME_LENGTH)
-
+    raw_frame = self.src.read(UART_FRAME_LENGTH)
     lighthouse_uart_frame = LighthouseUartFrame() # Reset data structure
 
-    # Sync frame
-    if reading == 0xffffffffffffffffffffffff:
-        lighthouse_uart_frame.is_sync_frame = True
-    else:
-        lighthouse_uart_frame.is_sync_frame = False
+    reading = True
+    while (reading):
+        # Sync frame
+        if raw_frame == 0xffffffffffffffffffffffff:
+            lighthouse_uart_frame.is_sync_frame = True
+        else:
+            lighthouse_uart_frame.is_sync_frame = False
 
-    lighthouse_uart_frame.data.timestamp = struct.unpack("<I", reading[9:] + b'\x00')[0]
-    lighthouse_uart_frame.data.beam_data = struct.unpack("<I", reading[6:9] + b'\x00')[0]
-    offset_6 = struct.unpack("<I", reading[3:6] + b'\x00')[0]
-    first_word = struct.unpack("<I", reading[:3] + b'\x00')[0]
+        lighthouse_uart_frame.data.timestamp = struct.unpack("<I", raw_frame[9:] + b'\x00')[0]
+        lighthouse_uart_frame.data.beam_data = struct.unpack("<I", raw_frame[6:9] + b'\x00')[0]
+        offset_6 = struct.unpack("<I", raw_frame[3:6] + b'\x00')[0]
+        first_word = struct.unpack("<I", raw_frame[:3] + b'\x00')[0]
 
-    # Offset is expressed in a 6 MHz clock, while the timestamp uses a 24 MHz clock.
-    # update offset to a 24 MHz clock
-    lighthouse_uart_frame.data.offset = offset_6 * 4
+        # Offset is expressed in a 6 MHz clock, while the timestamp uses a 24 MHz clock.
+        # update offset to a 24 MHz clock
+        lighthouse_uart_frame.data.offset = offset_6 * 4
 
-    lighthouse_uart_frame.data.sensor = first_word & 0x03
-    lighthouse_uart_frame.data.width = (first_word >> 8) & 0xffff
+        lighthouse_uart_frame.data.sensor = first_word & 0x03
+        lighthouse_uart_frame.data.width = (first_word >> 8) & 0xffff
 
-    identity = (first_word >> 2) & 0x1f
-    lighthouse_uart_frame.data.channel = 0
-    lighthouse_uart_frame.data.channel_found = True
-    lighthouse_uart_frame.data.slow_bit = identity & 1
+        nPoly_ok = ((first_word >> 7) & 0x01) == 0
+        if nPoly_ok:
+            identity = (first_word >> 2) & 0x1f
+            lighthouse_uart_frame.data.channel = identity >> 1
+            lighthouse_uart_frame.data.channel_found = True
+            lighthouse_uart_frame.data.slow_bit = identity & 1
+        else:
+            lighthouse_uart_frame.data.channel = None
+            lighthouse_uart_frame.data.channel_found = False
+            lighthouse_uart_frame.data.slow_bit = None
 
-    is_padding_zero = (((reading[5] | reading[8]) & 0xfe) == 0)
+        # Sync frame, ignore it
+        if offset_6 == 0xffffff:
+            reading = self.src.read(12)
+            continue
+
+        is_padding_zero = (((raw_frame[5] | raw_frame[8]) & 0xfe) == 0)
+        reading = False # Break loop
+
     return (is_padding_zero or lighthouse_uart_frame.is_sync_frame, lighthouse_uart_frame)
