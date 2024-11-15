@@ -75,7 +75,7 @@ class SerialHandler:
 
         # Sync frame, ignore it
         if offset_6 == 0xffffff:
-            reading = self.src.read(12)
+            raw_frame = self.src.read(12)
             continue
 
         is_padding_zero = (((raw_frame[5] | raw_frame[8]) & 0xfe) == 0)
