@@ -1,5 +1,7 @@
 10110101010011011110000000000000011110010001010100110011010001100101
 
+# https://raw.githubusercontent.com/nairol/LighthouseRedox/master/docs/images/OOTX%20Frame.png
+
 # First found sync (17 zeros and 1 one)
 00000000000000000 1
 
