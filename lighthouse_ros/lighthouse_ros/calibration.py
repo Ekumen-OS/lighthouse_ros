@@ -57,7 +57,7 @@ class LighthouseCalibrator:
     def save_calibration_data(self) -> None:
         """Parses the cal data from the OOTX decoder and saves it."""
         for bs in range(config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS):
-            if self.ootx_decoder[bs].is_fully_decoded():
+            if self.ootx_decoder[bs].is_fully_decoded:
                 new_cal_data = LighthouseCalibration()
                 new_cal_data = self.lighthouse_calibration_init_from_frame(bs)
                 if (new_cal_data.uid != self.base_station_calibrations[bs].uid) or (new_cal_data.valid != self.base_station_calibrations[bs].valid):
