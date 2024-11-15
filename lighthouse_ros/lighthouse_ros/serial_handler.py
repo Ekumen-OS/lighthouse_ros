@@ -64,7 +64,8 @@ class SerialHandler:
         nPoly_ok = ((first_word >> 7) & 0x01) == 0
         if nPoly_ok:
             identity = (first_word >> 2) & 0x1f
-            lighthouse_uart_frame.data.channel = identity >> 1
+            # TODO Hardcode channel to 0 because we are using just bs
+            lighthouse_uart_frame.data.channel = 0
             lighthouse_uart_frame.data.channel_found = True
             lighthouse_uart_frame.data.slow_bit = identity & 1
         else:
