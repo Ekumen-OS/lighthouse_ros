@@ -18,7 +18,7 @@ class LighthouseCore:
         # Class variables
         self.pulse_processor = PulseProcessor(logger)
         self.serial_handler = serial_handler
-        self.lighthouse_calibrator = LighthouseCalibrator()
+        self.lighthouse_calibrator = LighthouseCalibrator(logger)
         self.publisher = publisher
         self.logger = logger
 

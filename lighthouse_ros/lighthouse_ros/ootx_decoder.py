@@ -53,20 +53,26 @@ class OOTXDataFrame:
 
 class OOTXDecoder:
     """Class in charge of receiving the bs calibration slow bits and decoding them."""
-    def __init__(self):
-        self.n_zeros: int = 0
-        self.synchronized: bool = False
-        self.is_fully_decoded: bool = False
-        self.rx_state: RXState = RXState.rxLength
-        self.current_word: bitarray = bitarray()
-        self.frame_length: int = 0
-        self.crc32: int = 0
+    def __init__(self, logger):
+        self.is_fully_decoded: bool = False # Calibration is decoded and valid
 
-        self.data: list[bitarray] = []
-        self.frame: OOTXDataFrame = OOTXDataFrame()
+        self.current_word: bitarray = bitarray()
+
+        self.payload_length: int = 0  # Length of the payload in bytes
+
+        self.crc32: int = 0         # Used to check integrity of data
+        self.crc32_1: int = 0         # Used to check integrity of data
+
+        self.n_zeros: int = 0       # Used to count 0s and look for the sync frame
+        self.synced: bool = False
+
+        self.data: list[bitarray] = []              # Raw data, 43 bytes
+        self.frame: OOTXDataFrame = OOTXDataFrame() # Decoded data
+        self.logger = logger
 
     def ootx_decoder_process_bit(self, data: int) -> bool:
-        """Processes the calibration slow bit.
+        """
+        Processes the calibration slow bit.
 
         Args:
             data (int): The base station calibration slow bit
@@ -74,64 +80,71 @@ class OOTXDecoder:
         Returns:
             bool: If the calibration was fully or not
         """
-        data &= 1
+        bit = data & 1
 
-        # Look for the sync frame, which is 17 zeros and a one
-        if self.n_zeros == 17 and data == 1:
-            self.synchronized = True    # If sync frame was found
-            self.current_word.clear()
-            self.data.clear()
-            self.is_fully_decoded = False       # If all data frames where decoded
-            # If sync found, start reading the first frame which is the payload length
-            self.rx_state = RXState.rxLength    # Current frame being read
-            return False
-        if data == 0:
-            self.n_zeros += 1
-        else:
-            self.n_zeros = 0
+        # Start looking for the sync, 17 zeros followed by a one
+        if not self.synced and not self.is_fully_decoded:
+            if bit == 0:
+                self.n_zeros += 1
+            elif bit == 1 and self.n_zeros == 17:
+                self.synced = True
+                self.logger.info("Found cal sync, reading cal payload length")
+            else:
+                self.n_zeros = 0
+            return
 
-        if self.synchronized:
-            if len(self.current_word) == 16:
-                if data == 0:
-                    self.synchronized = False
-                    self.is_fully_decoded = False
-                    return False
+        # Start reading length. If length was retrieved, continue with data
+        if not self.payload_length:
+            self.current_word.append(bit)
+            # Read 17 bits given there's one sync bit, discard it when unpacking
+            if len(self.current_word) == 17:
+                self.current_word.pop()
+                self.payload_length = struct.unpack("<H", self.current_word.tobytes())[0]
                 self.current_word.clear()
-                if self.rx_state == RXState.rxDone:
-                    is_data_valid = self.check_crc()
-                    self.is_fully_decoded = is_data_valid
-                    self.synchronized = False
-                    self.extract_frame()
-                    return is_data_valid
-                else:
-                    self.is_fully_decoded = False
-                    return False
+                self.logger.info("Found payload length: " + str(self.payload_length))
+            return
 
-            self.current_word.append(data)
-            if len(self.current_word) == 16:
-                match self.rx_state:
-                    case RXState.rxLength:
-                        self.frame_length = struct.unpack("<h", self.current_word.tobytes())[0]
-                        if self.frame_length > OOTX_MAX_FRAME_LENGTH:
-                            self.synchronized = False
-                            self.is_fully_decoded = False
-                            return False
-                        self.rx_state = RXState.rxData
-                    case RXState.rxData:
-                        self.data.append(betole(self.current_word))
-                        if 2 * len(self.data) >= self.frame_length:
-                            self.rx_state = RXState.rxCrc0
-                    case RXState.rxCrc0:
-                        self.crc32 = struct.unpack("<H", self.current_word.tobytes())[0]
-                        self.rx_state = RXState.rxCrc1
-                    case RXState.rxCrc1:
-                        self.crc32 |= (struct.unpack("<H", self.current_word.tobytes())[0] << 16)
-                        self.rx_state = RXState.rxDone
-                    case RXState.rxDone:
-                        pass
-                self.current_word.clear() # Clear current word and get ready for new one
-        self.is_fully_decoded = False
-        return False
+        # Start reading data. If all data was retrieved, continue with CRC32
+        if len(self.data) < self.payload_length:
+            self.current_word.append(bit)
+            # Read 17 bits given there's one sync bit, discard it when unpacking
+            if len(self.current_word) == 17:
+                self.current_word.pop()
+                self.data.append(betole(self.current_word))
+                self.current_word.clear()
+                self.logger.info("Found " + str(len(self.data)) + " out of " + str(self.payload_length) + " payload bytes")
+            return
+
+        # TODO: Parse data and calculate CRC32
+
+        # Start reading CRC32. If it was retrieved, verify and finish
+        if not self.crc32:
+            self.current_word.append(bit)
+            # Read 17 bits given there's one sync bit, discard it when unpacking
+            if len(self.current_word) == 17 and not self.crc32_1:
+                self.current_word.pop()
+                self.crc32_1 = struct.unpack("<H", self.current_word.tobytes())[0]
+                self.current_word.clear()
+            elif self.crc32_1 and len(self.current_word) == 17:
+                self.current_word.pop()
+                self.crc32 = self.crc32_1 | (struct.unpack("<H", self.current_word.tobytes())[0] << 16)
+                self.current_word.clear
+            return
+
+        # Check crc and extract data if good
+        if self.check_crc():
+            self.is_fully_decoded = True
+            self.extract_frame()
+        else:
+            # Reset everything, something went wrong
+            self.is_fully_decoded = False
+            self.current_word.clear()
+            self.payload_length = 0
+            self.crc32 = 0
+            self.crc32_1 = 0
+            self.n_zeros = 0
+            self.synced = False
+            self.data.clear()
 
     def check_crc(self) -> bool:
         """Computes the CRC32 of the complete received cal data and compares against the received CRC32."""

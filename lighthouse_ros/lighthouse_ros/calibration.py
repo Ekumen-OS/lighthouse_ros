@@ -28,11 +28,12 @@ class LighthouseCalibration:
 
 class LighthouseCalibrator:
     """Class in charge of handling base station intrinsic calibrations."""
-    def __init__(self) -> None:
+    def __init__(self, logger) -> None:
+        self.logger = logger
         # The calibration for all base stations
         self.base_station_calibrations = [LighthouseCalibration()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
         # Object to read and decode the calibration from a UART frame
-        self.ootx_decoder = [OOTXDecoder()] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
+        self.ootx_decoder = [OOTXDecoder(logger)] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
         self.ootx_timestamps = [0] * config.CONFIG_DECK_LIGHTHOUSE_MAX_N_BS
 
     def handle_calibration_data(self, frame_data: PulseProcessorFrame):
