@@ -115,8 +115,6 @@ class OOTXDecoder:
                 self.logger.info("Found " + str(len(self.data)) + " out of " + str(self.payload_length) + " payload bytes")
             return
 
-        # TODO: Parse data and calculate CRC32
-
         # Start reading CRC32. If it was retrieved, verify and finish
         if not self.crc32:
             self.current_word.append(bit)
