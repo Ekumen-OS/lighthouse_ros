@@ -123,17 +123,21 @@ class OOTXDecoder:
                 self.current_word.pop()
                 self.crc32_1 = struct.unpack("<H", self.current_word.tobytes())[0]
                 self.current_word.clear()
+                self.logger.info("Found first half of the CRC32")
             elif self.crc32_1 and len(self.current_word) == 17:
                 self.current_word.pop()
                 self.crc32 = self.crc32_1 | (struct.unpack("<H", self.current_word.tobytes())[0] << 16)
                 self.current_word.clear
+                self.logger.info("Found second half of the CRC32")
             return
 
         # Check crc and extract data if good
         if self.check_crc():
+            self.logger.info("Verified CRC32, fully decoded")
             self.is_fully_decoded = True
             self.extract_frame()
         else:
+            self.logger.info("CRC32 verification failed")
             # Reset everything, something went wrong
             self.is_fully_decoded = False
             self.current_word.clear()
