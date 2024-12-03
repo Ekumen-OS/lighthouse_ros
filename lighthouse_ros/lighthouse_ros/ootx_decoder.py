@@ -150,8 +150,17 @@ class OOTXDecoder:
 
     def check_crc(self) -> bool:
         """Computes the CRC32 of the complete received cal data and compares against the received CRC32."""
-        received_crc32 = zlib.crc32(self.data)
-        return received_crc32 == self.crc32
+        # received_crc32 = zlib.crc32(self.data)
+        crc = 0
+        # Calculate CRC32 for each bitarray element
+        for ba in self.data:
+            # Convert bitarray to bytes
+            ba_bytes = ba.tobytes()
+            # Update CRC32
+            crc = zlib.crc32(ba_bytes, crc)
+
+        self.logger.info("Calculated crc: " + str(crc) + " vs received crc: " + str(self.crc32))
+        return crc == self.crc32
 
     def extract_frame(self):
         """Extracts the OOTX frame info from the saved data when decodification finished."""
