@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from bitarray import bitarray
 import struct
-import zlib
+from crc import CrcCalculator, Configuration
 
 # Documentation can be found here: https://github.com/nairol/LighthouseRedox/blob/master/docs/Light%20Emissions.md
 
@@ -69,6 +69,17 @@ class OOTXDecoder:
         self.data: list[bitarray] = []              # Raw data, 43 bytes
         self.frame: OOTXDataFrame = OOTXDataFrame() # Decoded data
         self.logger = logger
+
+        # Define custom CRC
+        config = Configuration(
+            width=32,
+            polynomial=0xEDB88320,
+            init_value=0xFFFFFFFF,
+            final_xor_value=0xFFFFFFFF,
+            reverse_input=True,
+            reverse_output=True
+        )
+        self.crc_calculator = CrcCalculator(config)
 
     def ootx_decoder_process_bit(self, data: int) -> bool:
         """
@@ -150,14 +161,13 @@ class OOTXDecoder:
 
     def check_crc(self) -> bool:
         """Computes the CRC32 of the complete received cal data and compares against the received CRC32."""
-        # received_crc32 = zlib.crc32(self.data)
         crc = 0
         # Calculate CRC32 for each bitarray element
         for ba in self.data:
             # Convert bitarray to bytes
             ba_bytes = ba.tobytes()
             # Update CRC32
-            crc = zlib.crc32(ba_bytes, crc)
+            crc = self.crc_calculator.checksum(ba_bytes)
 
         self.logger.info("Calculated crc: " + str(crc) + " vs received crc: " + str(self.crc32))
         return crc == self.crc32
