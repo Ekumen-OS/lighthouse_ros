@@ -71,7 +71,7 @@ class OOTXDecoder:
         self.logger = logger
 
         # Define custom CRC
-        config = Configuration(
+        self.base_config = Configuration(
             width=32,
             polynomial=0xEDB88320,
             init_value=0xFFFFFFFF,
@@ -79,7 +79,7 @@ class OOTXDecoder:
             reverse_input=True,
             reverse_output=True
         )
-        self.crc_calculator = Calculator(config)
+        self.crc_calculator = Calculator(self.base_config)
 
     def ootx_decoder_process_bit(self, data: int) -> bool:
         """
@@ -166,8 +166,21 @@ class OOTXDecoder:
         for ba in self.data:
             # Convert bitarray to bytes
             ba_bytes = ba.tobytes()
-            # Update CRC32
-            crc = self.crc_calculator.checksum(ba_bytes, crc)
+            # Update CRC32, skip first iteration
+            if crc:
+                config = Configuration(
+                    width=self.base_config.width,
+                    polynomial=self.base_config.polynomial,
+                    init_value=crc,
+                    final_xor_value=self.base_config.final_xor_value,
+                    reverse_input=self.base_config.reverse_input,
+                    reverse_output=self.base_config.reverse_output
+                )
+            # Create a new calculator with the updated config
+            self.crc_calculator = Calculator(config)
+            # Compute CRC for the current data
+            crc = self.crc_calculator.checksum(ba_bytes)
+
 
         self.logger.info("Calculated crc: " + str(crc) + " vs received crc: " + str(self.crc32))
         return crc == self.crc32
