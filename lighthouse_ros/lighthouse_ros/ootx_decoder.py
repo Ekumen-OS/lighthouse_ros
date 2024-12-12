@@ -133,12 +133,13 @@ class OOTXDecoder:
             if len(self.current_word) == 17 and not self.crc32_1:
                 self.current_word.pop()
                 self.crc32_1 = struct.unpack("<H", self.current_word.tobytes())[0]
-                self.current_word.clear()
+                # self.current_word.clear()
                 self.logger.info("Found first half of the CRC32")
-            elif self.crc32_1 and len(self.current_word) == 17:
+            elif self.crc32_1 and len(self.current_word) == (17+16):
                 self.current_word.pop()
-                self.crc32 = self.crc32_1 | (struct.unpack("<H", self.current_word.tobytes())[0] << 16)
-                self.current_word.clear
+                # self.crc32 = self.crc32_1 | (struct.unpack("<H", self.current_word.tobytes())[0] << 16)
+                self.crc32 = struct.unpack("<I", self.current_word.tobytes())[0]
+                self.current_word.clear()
                 self.logger.info("Found second half of the CRC32")
             return
 
@@ -176,8 +177,8 @@ class OOTXDecoder:
                     reverse_input=self.base_config.reverse_input,
                     reverse_output=self.base_config.reverse_output
                 )
-            # Create a new calculator with the updated config
-            self.crc_calculator = Calculator(config)
+                # Create a new calculator with the updated config
+                self.crc_calculator = Calculator(config)
             # Compute CRC for the current data
             crc = self.crc_calculator.checksum(ba_bytes)
 
