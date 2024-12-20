@@ -108,34 +108,46 @@ class OOTXDecoder:
         if not self.payload_length:
             self.current_word.append(bit)
             # Read 17 bits given there's one sync bit, discard it when unpacking
-            if len(self.current_word) == 17 and bit == 1:
-                self.logger.info("Popping in length")
-                self.current_word.pop()
-                self.payload_length = struct.unpack("<H", self.current_word.tobytes())[0]
-                self.current_word.clear()
-                self.logger.info("Found payload length: " + str(self.payload_length))
+            if len(self.current_word) == 17:
+                if bit == 1:
+                    self.logger.info("Popping in length")
+                    self.current_word.pop()
+                    self.payload_length = struct.unpack("<H", self.current_word.tobytes())[0]
+                    self.current_word.clear()
+                    self.logger.info("Found payload length: " + str(self.payload_length))
+                else:
+                    self.logger.info("Length: Bit was supposed to be 1, was not, resetting current word")
+                    self.current_word.clear()
             return
 
         # Start reading data. If all data was retrieved, continue with CRC32
         if len(self.data) < self.payload_length:
             self.current_word.append(bit)
             # Read 17 bits given there's one sync bit, discard it when unpacking
-            if len(self.current_word) == 17 and bit == 1:
-                self.current_word.pop()
-                self.data.append(betole(self.current_word))
-                self.current_word.clear()
-                self.logger.info("Found " + str(len(self.data)) + " out of " + str(self.payload_length) + " payload bytes")
+            if len(self.current_word) == 17:
+                if bit == 1:
+                    self.current_word.pop()
+                    self.data.append(betole(self.current_word))
+                    self.current_word.clear()
+                    self.logger.info("Found " + str(len(self.data)) + " out of " + str(self.payload_length) + " payload bytes")
+                else:
+                    self.logger.info("Data: Bit was supposed to be 1, was not, resetting current word")
+                    self.current_word.clear()
             return
 
         # Start reading CRC32. If it was retrieved, verify and finish
         if not self.crc32:
             self.current_word.append(bit)
             # Read 17 bits given there's one sync bit, discard it when unpacking
-            if len(self.current_word) == 17 and not self.crc32_1 and bit == 1:
-                self.current_word.pop()
-                self.crc32_1 = struct.unpack("<H", self.current_word.tobytes())[0]
-                # self.current_word.clear()
-                self.logger.info("Found first half of the CRC32")
+            if len(self.current_word) == 17 and not self.crc32_1:
+                if bit == 1:
+                    self.current_word.pop()
+                    self.crc32_1 = struct.unpack("<H", self.current_word.tobytes())[0]
+                    # self.current_word.clear()
+                    self.logger.info("Found first half of the CRC32")
+                else:
+                    self.logger.info("CRC32_1: Bit was supposed to be 1, was not, resetting current word")
+                    self.current_word.clear()
             elif self.crc32_1 and len(self.current_word) == (17+16) and bit == 1:
                 self.current_word.pop()
                 # self.crc32 = self.crc32_1 | (struct.unpack("<H", self.current_word.tobytes())[0] << 16)
