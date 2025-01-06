@@ -54,8 +54,6 @@ RUN mkdir -p $USER_WS/src
 
 #
 # Install project dependencies (from the package.xml files isolated in the cacher stage).
-# In AARCH64 (i.e. Raspberry Pi), only the realbot stack is built, as the simulation stack
-# is not supported.
 
 COPY --from=cacher --chown=$USER:$GROUP /tmp/ws/ $USER_WS/
 
