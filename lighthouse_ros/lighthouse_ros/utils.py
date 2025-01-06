@@ -24,7 +24,7 @@ MIN_TICKS_BETWEEN_SLOW_BITS = (887000 // 2) * 8 // 10
 OOTX_MAX_PAYLOAD_LENGTH = 43
 
 
-# The cycle times from the Lighhouse base stations is expressed
+# The cycle times from the Lighthouse base stations is expressed
 # in a 48 MHz clock, we use 24 MHz, hence the / 2.
 PERIODS = {
     1: 959000 / 2,
@@ -47,12 +47,12 @@ PERIODS = {
 
 
 def timestamp_diff(a, b):
-    """Calculate the difference between two timestamps, taking into account."""
+    """Calculate the difference between two timestamps, with overflow."""
     return (TIMESTAMP_COUNTER_MASK + 1 + a - b) & TIMESTAMP_COUNTER_MASK
 
 
 def timestamp_sum(a, b):
-    """Calculate the difference between two timestamps, taking into account."""
+    """Calculate the sum of two timestamps, with overflow."""
     return (a + b) & TIMESTAMP_COUNTER_MASK
 
 
