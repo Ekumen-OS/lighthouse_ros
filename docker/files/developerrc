@@ -1,0 +1,13 @@
+mkdir -p $USER_WS/persistence/$(id -u)/ccache
+mkdir -p $USER_WS/persistence/$(id -u)/install
+mkdir -p $USER_WS/persistence/$(id -u)/build
+
+if [ ! -d "$HOME/.ccache" ]; then
+    ln -s $USER_WS/persistence/$(id -u)/ccache  $HOME/.ccache
+    ln -s $USER_WS/persistence/$(id -u)/install $USER_WS/install
+    ln -s $USER_WS/persistence/$(id -u)/build   $USER_WS/build
+fi
+
+alias create_test_device='socat -d -d pty,link=/tmp/vserial1,raw,echo=0 pty,link=/tmp/vserial2,raw,echo=0'
+
+. /opt/ros/humble/setup.bash
