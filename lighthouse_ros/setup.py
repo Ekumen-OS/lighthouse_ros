@@ -27,7 +27,7 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='hitalio',
+    maintainer='Juan Carosella',
     maintainer_email='juancarosella96@creativa77.com.ar',
     description='TODO: Package description',
     license='Apache-2.0',

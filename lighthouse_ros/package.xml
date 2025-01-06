@@ -5,7 +5,7 @@
   <version>0.0.1</version>
   <description>Lighthouse deck decoding node for ROS</description>
 
-  <maintainer email="juancarosella96@creativa77.com.ar">hitalio</maintainer>
+  <maintainer email="juancarosella96@creativa77.com.ar">Juan Carosella</maintainer>
   <maintainer email="glpuga@ekumenlabs.com">Gerardo Puga</maintainer>
 
   <license>Apache 2.0</license>
