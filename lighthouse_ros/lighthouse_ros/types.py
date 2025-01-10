@@ -20,6 +20,8 @@ from lighthouse_ros.utils import npoly_is_valid
 from lighthouse_ros.utils import npoly_channel
 from lighthouse_ros.utils import npoly_slow_bit
 
+ByteBuffer = List[int]
+
 
 @dataclass
 class DataFrameContents:
@@ -31,6 +33,7 @@ class DataFrameContents:
     beam_word: int = 0
     padding_2: int = 0
     timestamp: int = 0
+    raw_data: ByteBuffer = field(default_factory=list)
 
     def valid_npoly(self) -> bool:
         """Check if the validity bit for the npoly value is set."""
@@ -77,8 +80,6 @@ class SweepBlockBearings:
         ]
     )
 
-
-ByteBuffer = List[int]
 
 DataFrameCallback = Callable[[bool, DataFrameContents], None]
 

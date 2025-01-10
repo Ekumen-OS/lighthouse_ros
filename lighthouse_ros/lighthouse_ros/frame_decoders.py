@@ -121,4 +121,5 @@ class DataFrameDecoder:
             beam_word=beam_word,
             padding_2=padding_2,
             timestamp=timestamp,
+            raw_data=frame_buffer,
         )
