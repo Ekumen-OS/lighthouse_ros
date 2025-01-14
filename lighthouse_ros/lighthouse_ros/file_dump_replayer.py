@@ -51,6 +51,7 @@ class LighthouseProtocolStreamPacer:
 
     MODE_SYNC: int = 0
     MODE_DATA: int = 1
+    MAX_INTEGER_24_BITS = 16777215
 
     def __init__(
         self,
@@ -108,13 +109,13 @@ class LighthouseProtocolStreamPacer:
             # Forward the data to the application
             self.forward_data(
                 timestamp=frame_data.timestamp,
-                raw_buffer=frame_data.raw_buffer,
+                raw_data=frame_data.raw_data,
             )
 
     def forward_data(
         self,
         timestamp: int,
-        raw_buffer: ByteBuffer,
+        raw_data: ByteBuffer,
     ):
         """Forward the data to the application at a realistic pace."""
         # if more than 0.5 seconds have passed since the last sync frame, send a fake sync frame
@@ -127,7 +128,7 @@ class LighthouseProtocolStreamPacer:
             )
         if sync_frame_delta_t > 0.5:
             self.__latest_sync_frame_timestamp = timestamp
-            self.__raw_frame_callback(self[255] * 12)
+            self.__raw_frame_callback([255] * 12)
 
         # if we don't have a timestamp for the last frame, set it to the current timestamp
         if self.__latest_frame_timestamp is None:
@@ -139,13 +140,19 @@ class LighthouseProtocolStreamPacer:
         )
         time.sleep(data_frame_delta_t)
         self.__latest_frame_timestamp = timestamp
-        self.__raw_frame_callback(raw_buffer)
+        self.__raw_frame_callback(raw_data)
 
     def timestamp_to_seconds(self, current: int, previous: int) -> float:
         """Convert a timestamp difference to seconds."""
         # do the calculation considering the difference with overflow, and the timestamp resolution
-        self.__logger.error("MISSING CODE!!! RETURNING 0.0!!!")
-        return 0.0
+        # Max integer with 24 bits (timestamp length) is 16,777,215
+        if current > previous:
+            time_diff = current - previous
+        else:
+            # Overflow
+            time_diff = self.MAX_INTEGER_24_BITS - previous + current
+        self.__logger.info(f"time_diff {time_diff}")
+        return time_diff * 1e-9
 
 
 def process_file(filename, pseudo_tty_dev):
@@ -154,9 +161,9 @@ def process_file(filename, pseudo_tty_dev):
     try:
         with serial.Serial(pseudo_tty_dev, 230400) as ser:
 
-            def raw_frame_callback(raw_buffer: ByteBuffer):
+            def raw_frame_callback(raw_data: ByteBuffer):
                 # forward data through pseudo-tty
-                ser.write(bytes(raw_buffer))
+                ser.write(bytes(raw_data))
 
             decoder = LighthouseProtocolStreamPacer(
                 logger=FakeLogger(),
