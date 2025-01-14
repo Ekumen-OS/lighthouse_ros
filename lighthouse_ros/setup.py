@@ -35,6 +35,7 @@ setup(
         'console_scripts': [
             'lighthouse_ros = lighthouse_ros.lighthouse_node:main',
             'file_parser_node = lighthouse_ros.file_parser_node:main',
+            'file_dump_replayer = lighthouse_ros.file_dump_replayer:main',
         ],
     },
 )
