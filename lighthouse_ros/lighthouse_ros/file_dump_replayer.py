@@ -19,6 +19,7 @@ from lighthouse_ros.logger_proxy import LoggerProxy
 from lighthouse_ros.frame_decoders import SyncFrameDecoder, DataFrameDecoder
 from lighthouse_ros.types import ByteBuffer, DataFrameContents
 from typing import Callable, Optional
+from utils import TIMESTAMP_COUNTER_MASK
 
 import time
 import serial
@@ -51,7 +52,6 @@ class LighthouseProtocolStreamPacer:
 
     MODE_SYNC: int = 0
     MODE_DATA: int = 1
-    MAX_INTEGER_24_BITS = 16777215
 
     def __init__(
         self,
@@ -150,7 +150,7 @@ class LighthouseProtocolStreamPacer:
             time_diff = current - previous
         else:
             # Overflow
-            time_diff = self.MAX_INTEGER_24_BITS - previous + current
+            time_diff = TIMESTAMP_COUNTER_MASK - previous + current
         self.__logger.info(f"time_diff {time_diff}")
         return time_diff * 1e-9
 
