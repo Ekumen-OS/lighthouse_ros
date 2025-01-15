@@ -19,7 +19,7 @@ from lighthouse_ros.logger_proxy import LoggerProxy
 from lighthouse_ros.frame_decoders import SyncFrameDecoder, DataFrameDecoder
 from lighthouse_ros.types import ByteBuffer, DataFrameContents
 from typing import Callable, Optional
-from utils import TIMESTAMP_COUNTER_MASK
+from utils import TIMESTAMP_COUNTER_MASK, TIMESTAMP_CLOCK_FREQUENCY, timestamp_diff
 
 import time
 import serial
@@ -150,9 +150,9 @@ class LighthouseProtocolStreamPacer:
             time_diff = current - previous
         else:
             # Overflow
-            time_diff = TIMESTAMP_COUNTER_MASK - previous + current
+            time_diff = timestamp_diff(previous, current)
         self.__logger.info(f"time_diff {time_diff}")
-        return time_diff * 1e-9
+        return time_diff / TIMESTAMP_CLOCK_FREQUENCY
 
 
 def process_file(filename, pseudo_tty_dev):
