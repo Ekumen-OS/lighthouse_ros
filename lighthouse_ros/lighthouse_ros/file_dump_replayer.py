@@ -151,7 +151,6 @@ class LighthouseProtocolStreamPacer:
         else:
             # Overflow
             time_diff = timestamp_diff(previous, current)
-        self.__logger.info(f"time_diff {time_diff}")
         return time_diff / TIMESTAMP_CLOCK_FREQUENCY
 
 
