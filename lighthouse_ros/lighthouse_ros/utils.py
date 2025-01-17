@@ -23,6 +23,7 @@ MIN_TICKS_BETWEEN_SLOW_BITS = (887000 // 2) * 8 // 10
 
 OOTX_MAX_PAYLOAD_LENGTH = 43
 
+TIMESTAMP_CLOCK_FREQUENCY = 24e6
 
 # The cycle times from the Lighthouse base stations is expressed
 # in a 48 MHz clock, we use 24 MHz, hence the / 2.
