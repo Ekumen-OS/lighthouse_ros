@@ -27,6 +27,8 @@ from serial.threaded import ReaderThread
 import rclpy
 from rclpy.node import Node
 
+import time
+from smbus2 import SMBus
 
 class LighthouseNode(Node):
     VALID_BAUDRATES = [9600, 19200, 38400, 57600, 115200, 230400]
@@ -86,6 +88,15 @@ class LighthouseNode(Node):
 
         self.__reader_thread.start()
         self.__reader_thread.connect()
+
+        # Write a 0 to get out of the bootloader mode and start receiving data via UART
+        try:
+            i2c_address = 0x2f
+            bus = SMBus(1)
+            time.sleep(1)
+            var = bus.write_byte_data(i2c_address, 0, 0)
+        except:
+            self.__logger.info("Out of bootloader mode")
 
         self.__logger.info("Lighthouse ROS node started")
 
