@@ -82,3 +82,4 @@ ros2 topic echo /lighthouse
 - [Repurposing Valve's SteamVR 2.0 Technology to Develop an Open-Source, Low-Cost Motion Capture System for Robotics](https://fosdem.org/2025/schedule/event/fosdem-2025-5013-repurposing-valve-s-steamvr-2-0-technology-to-develop-an-open-source-low-cost-motion-capture-system-for-robotics/), great talk at FOSDEM 2025 about the system.
 - [Lighthouse deck bootloader verilog code repository](https://github.com/bitcraze/lighthouse-bootloader), including the protocol to interact with the bootloader and make it boot the main firmware.
 - [Lighthouse deck firmware repository](https://github.com/bitcraze/lighthouse-fpga), including a general description of the protocol used to communicate with the deck.
+- Low-level, reverse-engineered [information about the protocol](https://github.com/nairol/LighthouseRedox/tree/master/docs).
