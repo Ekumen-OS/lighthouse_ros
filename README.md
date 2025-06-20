@@ -74,3 +74,11 @@ You can watch the output messages using `ros2 topic echo` or `ros2 topic hz` on 
 ```bash
 ros2 topic echo /lighthouse
 ```
+
+## References
+
+- [Lighthouse Positioning System: Dataset, Accuracy, and Precision for UAV Research](https://arxiv.org/abs/2104.11523), paper with description of the
+ overall system.
+- [Repurposing Valve's SteamVR 2.0 Technology to Develop an Open-Source, Low-Cost Motion Capture System for Robotics](https://fosdem.org/2025/schedule/event/fosdem-2025-5013-repurposing-valve-s-steamvr-2-0-technology-to-develop-an-open-source-low-cost-motion-capture-system-for-robotics/), great talk at FOSDEM 2025 about the system.
+- [Lighthouse deck bootloader verilog code repository](https://github.com/bitcraze/lighthouse-bootloader), including the protocol to interact with the bootloader and make it boot the main firmware.
+- [Lighthouse deck firmware repository](https://github.com/bitcraze/lighthouse-fpga), including a general description of the protocol used to communicate with the deck.
