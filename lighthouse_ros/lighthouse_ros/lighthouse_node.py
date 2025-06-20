@@ -27,11 +27,10 @@ from serial.threaded import ReaderThread
 import rclpy
 from rclpy.node import Node
 
-import time
-from smbus2 import SMBus
 
 class LighthouseNode(Node):
     VALID_BAUDRATES = [9600, 19200, 38400, 57600, 115200, 230400]
+    BOOTLOADER_BAUDRATE = 115200
 
     def __init__(self):
         """Initialize the node."""
@@ -43,10 +42,14 @@ class LighthouseNode(Node):
         # Serial port and handler
         self.declare_parameter("device", "")
         self.declare_parameter("baudrate", 230400)
+        self.declare_parameter("frame_id", "lighthouse_deck")
 
         self.__device = self.get_parameter("device").get_parameter_value().string_value
         self.__baudrate = (
             self.get_parameter("baudrate").get_parameter_value().integer_value
+        )
+        self.__frame_id = (
+            self.get_parameter("frame_id").get_parameter_value().string_value
         )
 
         if not self.__device:
@@ -66,10 +69,33 @@ class LighthouseNode(Node):
             SensorMeasurementsStamped, "lighthouse", 10
         )
 
-        self.__src_device = Serial(
-            self.__device,
-            self.__baudrate,
+        self.__logger.info(
+            "Initializing serial device {} with bootloader baudrate: {}".format(
+                self.__device,
+                self.BOOTLOADER_BAUDRATE,
+            )
         )
+
+        self.__src_device = Serial(
+            port=self.__device,
+            baudrate=self.BOOTLOADER_BAUDRATE,
+        )
+
+        self.__logger.info("Resetting the bootloader state")
+        self.__src_device.send_break(0.25)
+
+        self.__logger.info("Sending command to enable bootloader UART")
+        self.__src_device.write(b"\xBC")
+
+        self.__logger.info("Sending command to boot into main firmware")
+        self.__src_device.write(b"\x00")
+
+        self.__logger.info(
+            "Switching to main firmware baudrate: {}".format(self.__baudrate)
+        )
+        self.__src_device.baudrate = self.__baudrate
+
+        self.__logger.info("Serial port initialized!")
 
         self._light_house_handler = LighthouseProtocolDecoder(
             logger=self.__logger,
@@ -89,15 +115,6 @@ class LighthouseNode(Node):
         self.__reader_thread.start()
         self.__reader_thread.connect()
 
-        # Write a 0 to get out of the bootloader mode and start receiving data via UART
-        try:
-            i2c_address = 0x2f
-            bus = SMBus(1)
-            time.sleep(1)
-            var = bus.write_byte_data(i2c_address, 0, 0)
-        except:
-            self.__logger.info("Out of bootloader mode")
-
         self.__logger.info("Lighthouse ROS node started")
 
     def stop_thread(self):
@@ -106,22 +123,18 @@ class LighthouseNode(Node):
 
     def bearing_callback(self, sensor_bearings: SweepBlockBearings):
         """Process the bearing measurements."""
-        try:
-            msg = SensorMeasurementsStamped()
-            msg.header.stamp = self.get_clock().now().to_msg()
-            # TODO we should assign a frame id based on the base_station_id and configuration
-            msg.header.frame_id = ""
-            msg.sweep_data.hardware_timestamp = sensor_bearings.hardware_timestamp
-            msg.sweep_data.base_station_id = sensor_bearings.base_station_id
-            for i in range(len(sensor_bearings.sensor_angles)):
-                angles = SensorAngles()
-                angles.azimuth = sensor_bearings.sensor_angles[i].azimuth
-                angles.elevation = sensor_bearings.sensor_angles[i].elevation
-                msg.sweep_data.sensor_angles[i] = angles
-            self.__bearings_publisher.publish(msg)
-        except Exception as e:
-            self.__logger.error(f"Error processing bearing measurements: {e}")
-            pass
+        msg = SensorMeasurementsStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        # TODO we should assign a frame id based on the base_station_id and configuration
+        msg.header.frame_id = self.__frame_id
+        msg.sweep_data.hardware_timestamp = sensor_bearings.hardware_timestamp
+        msg.sweep_data.base_station_id = sensor_bearings.base_station_id
+        for i in range(len(sensor_bearings.sensor_angles)):
+            angles = SensorAngles()
+            angles.azimuth = sensor_bearings.sensor_angles[i].azimuth
+            angles.elevation = sensor_bearings.sensor_angles[i].elevation
+            msg.sweep_data.sensor_angles[i] = angles
+        self.__bearings_publisher.publish(msg)
 
 
 def main(args=None):

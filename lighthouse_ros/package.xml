@@ -13,9 +13,9 @@
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>lighthouse_ros_msgs</exec_depend>
 
-  <exec_depend>python3-smbus2</exec_depend>
   <exec_depend>python3-bitarray</exec_depend>
   <exec_depend>python3-serial</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

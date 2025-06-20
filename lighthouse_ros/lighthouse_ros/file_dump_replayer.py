@@ -19,7 +19,7 @@ from lighthouse_ros.logger_proxy import LoggerProxy
 from lighthouse_ros.frame_decoders import SyncFrameDecoder, DataFrameDecoder
 from lighthouse_ros.types import ByteBuffer, DataFrameContents
 from typing import Callable, Optional
-from utils import TIMESTAMP_COUNTER_MASK, TIMESTAMP_CLOCK_FREQUENCY, timestamp_diff
+from utils import TIMESTAMP_CLOCK_FREQUENCY, timestamp_diff
 
 import time
 import serial
