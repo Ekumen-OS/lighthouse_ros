@@ -12,6 +12,7 @@
 
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>lighthouse_ros_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
 
   <exec_depend>python3-bitarray</exec_depend>
   <exec_depend>python3-serial</exec_depend>
