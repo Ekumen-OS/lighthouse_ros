@@ -28,7 +28,7 @@ RUN apt-get update \
     tmux \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip install pre-commit==2.20.0
+RUN pip install pre-commit==2.20.0 spatialmath-python
 
 RUN addgroup --gid 1000 $GROUP \
  && adduser --uid 1000 --ingroup $GROUP --home /home/$USER --shell /bin/sh --disabled-password --gecos "" $USER \
@@ -80,10 +80,11 @@ RUN /bin/bash -c '\
 # Final setup of the workspace
 
 RUN mkdir -p $USER_WS/persistence && chmod 777 $USER_WS/persistence
-COPY docker/files/developerrc /home/developer/.developerrc
-RUN echo "source /home/developer/.developerrc" >> /home/developer/.bashrc
+
+RUN sudo rm /ros_entrypoint.sh
+COPY docker/files/ros_entrypoint.sh /ros_entrypoint.sh
 
 ENV WITHIN_DEV 1
 
-ENV SHELL /bin/bash
-ENTRYPOINT ["fixuid", "-q", "/ros_entrypoint.sh", "/bin/bash"]
+CMD        ["bash"]
+ENTRYPOINT ["fixuid", "-q", "/ros_entrypoint.sh"]

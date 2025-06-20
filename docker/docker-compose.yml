@@ -2,7 +2,7 @@ services:
   lighthouse_ros-dev:
     build:
       context: ..
-      dockerfile: docker/images/${ROSDISTRO:-humble}/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: lighthouse_ros-dev
     environment:
       - DISPLAY

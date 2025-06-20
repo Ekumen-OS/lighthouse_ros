@@ -1,4 +1,0 @@
-smbus2
-bitarray
-pyserial
-crc
