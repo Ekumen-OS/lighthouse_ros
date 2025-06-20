@@ -33,6 +33,7 @@ setup(
     license='Apache-2.0',
     entry_points={
         'console_scripts': [
+            'lighthouse_map_server = lighthouse_ros.lighthouse_map_server_node:main',
             'lighthouse_ros = lighthouse_ros.lighthouse_node:main',
             'file_parser_node = lighthouse_ros.file_parser_node:main',
             'file_dump_replayer = lighthouse_ros.file_dump_replayer:main',
