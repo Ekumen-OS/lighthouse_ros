@@ -75,6 +75,30 @@ You can watch the output messages using `ros2 topic echo` or `ros2 topic hz` on 
 ros2 topic echo /lighthouse
 ```
 
+## Base station geometry estimation
+
+This package provides tools to estimate the geometry of the Lighthouse base stations. It includes a node that subscribes to `/lighthouse` messages, records them for a short period, and can then perform estimations.
+
+To facilitate development and testing, this package can be launched in two modes: live or test.
+
+### Live Mode
+
+In this mode, the system connects to a physical Lighthouse deck via a serial port. It launches the `lighthouse_ros` node to publish sensor data and the `base_geometry_estimation_node` to consume it.
+
+To run in live mode, execute the following command, replacing `/dev/ttyACM0` with your device's serial port:
+
+```bash
+ros2 launch lighthouse_base_geometry_estimation lighthouse_base_geometry_estimation.launch.py device:=/dev/ttyACM0
+```
+
+### Test Mode
+
+In this mode, the system uses test data generated from the testbench node and published to the `/lighthouse` topic. Use the following command to run the test mode:
+
+```bash
+ros2 launch lighthouse_base_geometry_estimation lighthouse_base_geometry_estimation.launch.py run_testbench:=True
+```
+
 ## References
 
 - [Lighthouse Positioning System: Dataset, Accuracy, and Precision for UAV Research](https://arxiv.org/abs/2104.11523), paper with description of the
