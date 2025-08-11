@@ -28,7 +28,7 @@ RUN apt-get update \
     tmux \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip install pre-commit==2.20.0 spatialmath-python opencv-python
+RUN pip install pre-commit==2.20.0 spatialmath-python==1.1.14 numpy==1.22.0 matplotlib==3.5.1
 
 RUN addgroup --gid 1000 $GROUP \
  && adduser --uid 1000 --ingroup $GROUP --home /home/$USER --shell /bin/sh --disabled-password --gecos "" $USER \
