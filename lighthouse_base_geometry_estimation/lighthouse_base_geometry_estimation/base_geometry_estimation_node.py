@@ -44,7 +44,7 @@ class BaseGeometryEstimationNode(Node):
             SensorMeasurementsStamped, '/lighthouse', self.listener_callback, 10
         )
 
-        self._data_collection_duration = 2  # In seconds
+        self._data_collection_duration = 5  # In seconds
         self._timer = self.create_timer(
             self._data_collection_duration, self.stop_registering
         )
