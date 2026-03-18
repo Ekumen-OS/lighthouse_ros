@@ -3,9 +3,9 @@
 <package format="3">
   <name>lighthouse_testbench_bringup</name>
   <version>1.0.0</version>
-  <description> TBD </description>
-  <maintainer email="glpuga@gmail.com">Gerardo Puga</maintainer>
-  <license>Apache 2.0</license>
+  <description>Launch files and configuration for lighthouse testbench</description>
+  <maintainer email="glpuga@ekumenlabs.com">Gerardo Puga</maintainer>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

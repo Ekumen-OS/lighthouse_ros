@@ -41,7 +41,7 @@ def generate_launch_description():
         namespace="",
         output="screen",
         executable="lighthouse_ros",
-        arguments=["--ros-args", "--log-level", "INFO"],
+        arguments=["--ros-args", "--log-level", "DEBUG"],
         parameters=[
             {
                 "device": device_conf,
