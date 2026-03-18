@@ -28,7 +28,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Juan Carosella',
-    maintainer_email='juancarosella96@creativa77.com.ar',
+    maintainer_email='juancarosella96@ekumenlabs.com',
     description='TODO: Package description',
     license='Apache-2.0',
     entry_points={

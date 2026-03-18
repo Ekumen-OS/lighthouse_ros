@@ -2,9 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>lighthouse_testbench</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="glpuga@gmail.com">Gerardo Puga</maintainer>
+  <version>1.0.0</version>
+  <description>Lighthouse testbench simulation and visualization tools</description>
+  <maintainer email="glpuga@ekumenlabs.com">Gerardo Puga</maintainer>
   <license>Apache-2.0</license>
 
   <exec_depend>geometry_msgs</exec_depend>
