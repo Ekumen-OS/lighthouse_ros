@@ -1,0 +1,26 @@
+name: Unit tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  ROS_DOMAIN_ID: 88
+jobs:
+  ci-tests:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Pre-build of the docker image
+      run: ./docker/run.sh --build -- true
+
+    - name: Run unit tests
+      run: ./docker/run.sh --build -- bash -c 'rm -rf build/* install/* && ls -l build/ && colcon build && colcon test'

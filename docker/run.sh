@@ -21,10 +21,10 @@ set -o errexit
 cd $(dirname "$(readlink -f "$0")")
 
 [[ ! -z "${WITHIN_DEV}" ]] && echo "Already in the development environment!" && exit 1
-HELP="Usage: $(basename $0) [-b|--build] [-p|--privileged]"
+HELP="Usage: $(basename $0) [-b|--build] [-- <command>]"
 
 set +o errexit
-VALID_ARGS=$(OPTERR=1 getopt -o bph --long build,privileged,help -- "$@")
+VALID_ARGS=$(OPTERR=1 getopt -o bh --long build,help -- "$@")
 RET_CODE=$?
 set -o errexit
 
@@ -38,7 +38,7 @@ if [[ $RET_CODE -ne 0 ]]; then
 fi
 
 BUILD=false
-PRIVILEGED_CONTAINER=true
+DOCKER_CMD=()
 
 eval set -- "$VALID_ARGS"
 while [[ "$1" != "" ]]; do
@@ -47,16 +47,15 @@ while [[ "$1" != "" ]]; do
         BUILD=true
         shift
         ;;
-    -u | --non-privileged)
-        PRIVILEGED_CONTAINER=false
-        shift
-        ;;
     -h | --help)
         echo $HELP
         exit 0
         ;;
     --) # start of positional arguments
         shift
+        # Capture remaining arguments as the command to execute
+        DOCKER_CMD=("$@")
+        break
         ;;
     *)
         >&2 echo "Unrecognized positional argument: $1"
@@ -72,4 +71,4 @@ done
 # Otherwise, we could just forward the script arguments to the run verb.
 [[ "$BUILD" = true ]] && docker compose build lighthouse_ros-dev
 
-PRIVILEGED_CONTAINER=$PRIVILEGED_CONTAINER USERID=$(id -u) GROUPID=dialout docker compose run --rm lighthouse_ros-dev
+USERID=$(id -u) GROUPID=$(id -g) docker compose run --rm lighthouse_ros-dev "${DOCKER_CMD[@]}"
