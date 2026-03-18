@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>lighthouse_deck_hardware</name>
+  <version>0.1.0</version>
+  <description>ROS2 Control hardware interface for Lighthouse Deck</description>
+  <maintainer email="maintainer@ekumen.com">Ekumen</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>hardware_interface</depend>
+  <depend>lighthouse_deck_utils</depend>
+  <depend>lighthouse_protocol_decoder</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>rclcpp</depend>
+  <depend>realtime_tools</depend>
+
+  <test_depend>ament_cmake_gmock</test_depend>
+  <test_depend>ros2_control_test_assets</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <hardware_interface plugin="${prefix}/lighthouse_deck_hardware.xml"/>
+  </export>
+</package>

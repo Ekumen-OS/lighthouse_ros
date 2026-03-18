@@ -1,0 +1,113 @@
+# Example ROS2 Control configuration for Lighthouse Deck Hardware
+# This file demonstrates how to configure the lighthouse_deck_hardware component
+
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    lighthouse_deck_sensor_broadcaster:
+      type: sensor_state_broadcaster/SensorStateBroadcaster
+
+hardware:
+  - name: lighthouse_deck
+    type: sensor
+    plugin: lighthouse_deck_hardware/LighthouseDeckHardware
+
+    # Hardware parameters
+    params:
+      name: lighthouse              # Prefix for interface names (default: "lighthouse")
+      device: /dev/ttyUSB0          # Serial device path
+      baudrate: "230400"            # Communication baudrate (default: 230400)
+
+    # State interfaces exported by this hardware
+    # For each sensor (0-3) and each base station (0-3):
+    # - <name>_sensor_<sensor_id>_base_<base_station_id>/azimuth
+    # - <name>_sensor_<sensor_id>_base_<base_station_id>/elevation
+    # For each base station (0-3):
+    # - <name>_base_<base_station_id>/timestamp
+    sensors:
+      # Sensor 0 with all base stations
+      - name: lighthouse_sensor_0_base_0
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_lighthouse_sensor_0_base_1
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_sensor_0_base_2
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_lighthouse_sensor_0_base_3
+        state_interfaces:
+          - azimuth
+          - elevation
+
+      # Sensor 1 with all base stations
+      - name: lighthouse_sensor_1_base_0
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_lighthouse_sensor_1_base_1
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_sensor_1_base_2
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_lighthouse_sensor_1_base_3
+        state_interfaces:
+          - azimuth
+          - elevation
+
+      # Sensor 2 with all base stations
+      - name: lighthouse_sensor_2_base_0
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_lighthouse_sensor_2_base_1
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_sensor_2_base_2
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_lighthouse_sensor_2_base_3
+        state_interfaces:
+          - azimuth
+          - elevation
+
+      # Sensor 3 with all base stations
+      - name: lighthouse_sensor_3_base_0
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_lighthouse_sensor_3_base_1
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_sensor_3_base_2
+        state_interfaces:
+          - azimuth
+          - elevation
+      - name: lighthouse_sensor_3_base_3
+        state_interfaces:
+          - azimuth
+          - elevation
+
+      # Timestamp interfaces for each base station
+      - name: lighthouse_base_0
+        state_interfaces:
+          - timestamp
+      - name: lighthouse_base_1
+        state_interfaces:
+          - timestamp
+      - name: lighthouse_base_2
+        state_interfaces:
+          - timestamp
+      - name: lighthouse_base_3
+        state_interfaces:
+          - timestamp
