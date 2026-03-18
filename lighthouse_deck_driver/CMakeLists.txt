@@ -13,7 +13,7 @@
 # limitations under the License.
 
 cmake_minimum_required(VERSION 3.8)
-project(lighthouse_deck_hardware)
+project(lighthouse_deck_driver)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -25,71 +25,64 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(hardware_interface REQUIRED)
-find_package(pluginlib REQUIRED)
-find_package(rclcpp_lifecycle REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(lighthouse_deck_msgs REQUIRED)
 find_package(lighthouse_protocol_decoder REQUIRED)
 find_package(lighthouse_deck_utils REQUIRED)
 
-# Create the hardware interface library
-add_library(${PROJECT_NAME} SHARED
-  src/lighthouse_deck_hardware.cpp
+# Create the lighthouse deck driver component library
+add_library(lighthouse_deck_driver_component SHARED
+  src/lighthouse_deck_driver_node.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(lighthouse_deck_driver_component PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
-ament_target_dependencies(${PROJECT_NAME}
+ament_target_dependencies(lighthouse_deck_driver_component
   rclcpp
-  hardware_interface
-  pluginlib
-  rclcpp_lifecycle
+  rclcpp_components
+  std_msgs
+  lighthouse_deck_msgs
   lighthouse_protocol_decoder
   lighthouse_deck_utils
 )
 
-# Export the plugin
-pluginlib_export_plugin_description_file(
-    hardware_interface lighthouse_deck_hardware.xml)
+# Register the component
+rclcpp_components_register_node(lighthouse_deck_driver_component
+  PLUGIN "lighthouse_deck_driver::LighthouseDeckDriverNode"
+  EXECUTABLE lighthouse_deck_driver
+)
 
-# Install
-install(TARGETS ${PROJECT_NAME}
+# Install the component library
+install(TARGETS lighthouse_deck_driver_component
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
 
+# Install headers
 install(DIRECTORY include/
   DESTINATION include
 )
 
-install(FILES lighthouse_deck_hardware.xml
+# Install launch files
+install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
-  find_package(ament_cmake_gmock REQUIRED)
-  find_package(ros2_control_test_assets REQUIRED)
-
-  ament_add_gmock(test_load_lighthouse_deck_hardware
-    test/test_load_lighthouse_deck_hardware.cpp)
-  target_include_directories(test_load_lighthouse_deck_hardware PRIVATE include)
-  ament_target_dependencies(test_load_lighthouse_deck_hardware
-    hardware_interface
-    ros2_control_test_assets
-  )
 endif()
 
-ament_export_include_directories(include)
-ament_export_libraries(${PROJECT_NAME})
+ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(
   rclcpp
-  hardware_interface
-  pluginlib
-  rclcpp_lifecycle
+  rclcpp_components
+  std_msgs
+  lighthouse_deck_msgs
   lighthouse_protocol_decoder
   lighthouse_deck_utils
 )

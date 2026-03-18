@@ -13,7 +13,7 @@
 # limitations under the License.
 
 cmake_minimum_required(VERSION 3.8)
-project(lighthouse_deck_hardware)
+project(lighthouse_deck_utils)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -24,35 +24,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(hardware_interface REQUIRED)
-find_package(pluginlib REQUIRED)
-find_package(rclcpp_lifecycle REQUIRED)
-find_package(lighthouse_protocol_decoder REQUIRED)
-find_package(lighthouse_deck_utils REQUIRED)
+find_package(asio_cmake_module REQUIRED)
+find_package(ASIO REQUIRED)
 
-# Create the hardware interface library
+# Create the utils library
 add_library(${PROJECT_NAME} SHARED
-  src/lighthouse_deck_hardware.cpp
+  src/serial_port.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
+  ${ASIO_INCLUDE_DIR}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
-ament_target_dependencies(${PROJECT_NAME}
-  rclcpp
-  hardware_interface
-  pluginlib
-  rclcpp_lifecycle
-  lighthouse_protocol_decoder
-  lighthouse_deck_utils
-)
-
-# Export the plugin
-pluginlib_export_plugin_description_file(
-    hardware_interface lighthouse_deck_hardware.xml)
+# Link pthread for threading support
+target_link_libraries(${PROJECT_NAME} pthread)
 
 # Install
 install(TARGETS ${PROJECT_NAME}
@@ -66,32 +53,14 @@ install(DIRECTORY include/
   DESTINATION include
 )
 
-install(FILES lighthouse_deck_hardware.xml
-  DESTINATION share/${PROJECT_NAME}
-)
-
 if(BUILD_TESTING)
-  find_package(ament_cmake_gmock REQUIRED)
-  find_package(ros2_control_test_assets REQUIRED)
-
-  ament_add_gmock(test_load_lighthouse_deck_hardware
-    test/test_load_lighthouse_deck_hardware.cpp)
-  target_include_directories(test_load_lighthouse_deck_hardware PRIVATE include)
-  ament_target_dependencies(test_load_lighthouse_deck_hardware
-    hardware_interface
-    ros2_control_test_assets
-  )
 endif()
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
 ament_export_dependencies(
-  rclcpp
-  hardware_interface
-  pluginlib
-  rclcpp_lifecycle
-  lighthouse_protocol_decoder
-  lighthouse_deck_utils
+  asio_cmake_module
+  ASIO
 )
 
 ament_package()
