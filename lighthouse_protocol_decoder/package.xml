@@ -4,7 +4,10 @@
   <name>lighthouse_protocol_decoder</name>
   <version>0.1.0</version>
   <description>OOTX frame decoder library for Lighthouse base stations</description>
-  <maintainer email="lighthouse@ekumenlabs.com">Ekumen</maintainer>
+
+  <maintainer email="glpuga@ekumenlabs.com">Gerardo Puga</maintainer>
+  <maintainer email="juancarosella96@ekumenlabs.com">Juan Carosella</maintainer>
+
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
