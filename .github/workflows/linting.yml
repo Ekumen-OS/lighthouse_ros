@@ -1,4 +1,4 @@
-name: pre-commit check enforcer
+name: CI code linting
 
 on:
   push:
@@ -9,23 +9,25 @@ on:
       - main
   workflow_dispatch:
 
-# Cancel previously running PR jobs
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
   cancel-in-progress: true
 
 jobs:
-  pre-commit-check:
-    name: Pre-commit check
-    runs-on: ubuntu-22.04
+  linter:
+    name: Lint sources
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/catthehacker/ubuntu:act-latest
+      options: --user 1000:1000  # matches self-hosted runner UID/GID.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Setup python
+
+      - name: Setup Python
         uses: actions/setup-python@v6
         with:
           cache: pip
-      - name: Install python packages
-        run: pip install pre-commit
-      - name: Run linters
-        run: pre-commit run --all-files --verbose --show-diff-on-failure
+
+      - name: Lint
+        run: pipx run pre-commit run --all-files --verbose --show-diff-on-failure
