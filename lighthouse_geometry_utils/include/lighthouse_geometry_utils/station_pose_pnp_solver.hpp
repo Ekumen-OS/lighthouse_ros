@@ -16,13 +16,14 @@
 #define LIGHTHOUSE_GEOMETRY_UTILS__STATION_POSE_PNP_SOLVER_HPP_
 
 #include <Eigen/Core>
+
+#include <array>
+
 #include <opencv2/core.hpp>
 #include <sophus/se3.hpp>
 
-#include <array>
-#include <vector>
-
-namespace lighthouse_geometry_utils {
+namespace lighthouse_geometry_utils
+{
 
 /**
  * @brief Solves for Lighthouse station pose using Perspective-n-Point
@@ -31,7 +32,8 @@ namespace lighthouse_geometry_utils {
  * Computes the 6-DOF pose of a Lighthouse station relative to a tracker
  * deck frame from measured elevation and azimuth angles at four sensors.
  */
-class StationPosePnPSolver {
+class StationPosePnPSolver
+{
 public:
   /// Constructs a PnP solver with default Lighthouse Deck sensor configuration.
   StationPosePnPSolver();
@@ -44,13 +46,11 @@ public:
    * @param azimuths Array of 4 azimuth angles in radians (horizontal angle).
    * @return SE3 transformation of the  station pose in the deck frame.
    */
-  Sophus::SE3d calculate(const std::array<double, 4> &elevations,
-                         const std::array<double, 4> &azimuths) const;
+  Sophus::SE3d solve(
+    const std::array<double, 4> & elevations,
+    const std::array<double, 4> & azimuths) const;
 
 private:
-  /// 3D positions of the four sensors in the deck frame (in meters).
-  static const std::vector<cv::Point3d> sensor_poses_in_deck_;
-
   /// Virtual camera intrinsic matrix (3x3) for angle-to-image projection.
   cv::Mat camera_matrix_;
 
@@ -68,10 +68,11 @@ private:
    * @return Array of 4 points in the virtual image plane.
    */
   std::array<cv::Point2d, 4>
-  projectToVirtualPlane(const std::array<double, 4> &elevations,
-                        const std::array<double, 4> &azimuths) const;
+  projectToVirtualPlane(
+    const std::array<double, 4> & elevations,
+    const std::array<double, 4> & azimuths) const;
 };
 
-} // namespace lighthouse_geometry_utils
+}  // namespace lighthouse_geometry_utils
 
-#endif // LIGHTHOUSE_GEOMETRY_UTILS__STATION_POSE_PNP_SOLVER_HPP_
+#endif  // LIGHTHOUSE_GEOMETRY_UTILS__STATION_POSE_PNP_SOLVER_HPP_
