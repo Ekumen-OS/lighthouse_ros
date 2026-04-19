@@ -18,10 +18,12 @@
 #include <memory>
 #include <string>
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 /// Interface for logging messages at different severity levels
-class LoggerInterface {
+class LoggerInterface
+{
 public:
   using Ptr = std::shared_ptr<LoggerInterface>;
 
@@ -29,30 +31,31 @@ public:
 
   /// Log a debug message
   /// @param message The message to log
-  virtual void debug(const std::string &message) = 0;
+  virtual void debug(const std::string & message) = 0;
 
   /// Log an info message
   /// @param message The message to log
-  virtual void info(const std::string &message) = 0;
+  virtual void info(const std::string & message) = 0;
 
   /// Log a warning message
   /// @param message The message to log
-  virtual void warning(const std::string &message) = 0;
+  virtual void warning(const std::string & message) = 0;
 
   /// Log an error message
   /// @param message The message to log
-  virtual void error(const std::string &message) = 0;
+  virtual void error(const std::string & message) = 0;
 };
 
 /// Dummy logger implementation that does nothing (used for testing)
-class NullLogger : public LoggerInterface {
+class NullLogger : public LoggerInterface
+{
 public:
-  void debug([[maybe_unused]] const std::string &message) override {}
-  void info([[maybe_unused]] const std::string &message) override {}
-  void warning([[maybe_unused]] const std::string &message) override {}
-  void error([[maybe_unused]] const std::string &message) override {}
+  void debug([[maybe_unused]] const std::string & message) override {}
+  void info([[maybe_unused]] const std::string & message) override {}
+  void warning([[maybe_unused]] const std::string & message) override {}
+  void error([[maybe_unused]] const std::string & message) override {}
 };
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-#endif // LIGHTHOUSE_PROTOCOL_DECODER__LOGGER_HPP_
+#endif  // LIGHTHOUSE_PROTOCOL_DECODER__LOGGER_HPP_

@@ -14,18 +14,21 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <vector>
+
 #include "lighthouse_protocol_decoder/crc32.hpp"
 #include "lighthouse_protocol_decoder/logger.hpp"
 #include "lighthouse_protocol_decoder/ootx_frame_decoder.hpp"
 
-#include <string>
-#include <vector>
+namespace lighthouse_protocol_decoder
+{
 
-namespace lighthouse_protocol_decoder {
-
-class OOTXFrameDecoderTest : public ::testing::Test {
+class OOTXFrameDecoderTest : public ::testing::Test
+{
 protected:
-  void SetUp() override {
+  void SetUp() override
+  {
     decoder_ = std::make_unique<OOTXFrameDecoder>(nullptr);
   }
 
@@ -68,22 +71,22 @@ TEST_F(OOTXFrameDecoderTest, ValidFrameDecoding) {
 
   // Helper to add a 16-bit word with sync bit
   auto add_word = [this](std::uint16_t word) {
-    // MSB first
-    for (auto i = 15; i >= 0; --i) {
-      decoder_->processSlowBit((word >> i) & 1);
-    }
-    decoder_->processSlowBit(true); // sync bit
-  };
+      // MSB first
+      for (auto i = 15; i >= 0; --i) {
+        decoder_->processSlowBit((word >> i) & 1);
+      }
+      decoder_->processSlowBit(true);  // sync bit
+    };
 
   // Helper to add a 16-bit word in little-endian byte order with sync bit
   auto add_word_le = [this](std::uint16_t word) {
-    // Swap bytes then send MSB first
-    const auto swapped = ((word & 0xFF) << 8) | ((word >> 8) & 0xFF);
-    for (auto i = 15; i >= 0; --i) {
-      decoder_->processSlowBit((swapped >> i) & 1);
-    }
-    decoder_->processSlowBit(true); // sync bit
-  };
+      // Swap bytes then send MSB first
+      const auto swapped = ((word & 0xFF) << 8) | ((word >> 8) & 0xFF);
+      for (auto i = 15; i >= 0; --i) {
+        decoder_->processSlowBit((swapped >> i) & 1);
+      }
+      decoder_->processSlowBit(true);  // sync bit
+    };
 
   // 1. Preamble (16 zeros)
   add_word(0x0000);
@@ -108,9 +111,9 @@ TEST_F(OOTXFrameDecoderTest, ValidFrameDecoding) {
 TEST_F(OOTXFrameDecoderTest, InvalidPreambleRejected) {
   // Send a word that's not all zeros for preamble
   for (int i = 0; i < 16; ++i) {
-    decoder_->processSlowBit(i == 0); // First bit is 1, rest are 0
+    decoder_->processSlowBit(i == 0);  // First bit is 1, rest are 0
   }
-  decoder_->processSlowBit(true); // sync bit
+  decoder_->processSlowBit(true);  // sync bit
 
   // Send length
   for (int i = 0; i < 16; ++i) {
@@ -127,7 +130,7 @@ TEST_F(OOTXFrameDecoderTest, InvalidSyncBitRejected) {
   for (int i = 0; i < 16; ++i) {
     decoder_->processSlowBit(false);
   }
-  decoder_->processSlowBit(false); // Wrong! Should be 1
+  decoder_->processSlowBit(false);  // Wrong! Should be 1
 
   // Should not decode
   EXPECT_FALSE(decoder_->hasDecodedFrame());
@@ -143,7 +146,7 @@ TEST_F(OOTXFrameDecoderTest, ExcessiveLengthRejected) {
   // Length > 43 (send 50 in little-endian: 0x3200)
   std::uint16_t invalid_length = 50;
   std::uint16_t le_length =
-      ((invalid_length & 0xFF) << 8) | ((invalid_length >> 8) & 0xFF);
+    ((invalid_length & 0xFF) << 8) | ((invalid_length >> 8) & 0xFF);
   for (int i = 15; i >= 0; --i) {
     decoder_->processSlowBit((le_length >> i) & 1);
   }
@@ -155,32 +158,33 @@ TEST_F(OOTXFrameDecoderTest, ExcessiveLengthRejected) {
 TEST_F(OOTXFrameDecoderTest, CRCMismatchRejected) {
   // Similar to valid frame test but with wrong CRC
   auto add_word = [this](std::uint16_t word) {
-    for (int i = 15; i >= 0; --i) {
-      decoder_->processSlowBit((word >> i) & 1);
-    }
-    decoder_->processSlowBit(true);
-  };
+      for (int i = 15; i >= 0; --i) {
+        decoder_->processSlowBit((word >> i) & 1);
+      }
+      decoder_->processSlowBit(true);
+    };
 
   auto add_word_le = [this](std::uint16_t word) {
-    std::uint16_t swapped = ((word & 0xFF) << 8) | ((word >> 8) & 0xFF);
-    for (int i = 15; i >= 0; --i) {
-      decoder_->processSlowBit((swapped >> i) & 1);
-    }
-    decoder_->processSlowBit(true);
-  };
+      std::uint16_t swapped = ((word & 0xFF) << 8) | ((word >> 8) & 0xFF);
+      for (int i = 15; i >= 0; --i) {
+        decoder_->processSlowBit((swapped >> i) & 1);
+      }
+      decoder_->processSlowBit(true);
+    };
 
   add_word(0x0000);    // Preamble
-  add_word_le(0x0002); // Length = 2
+  add_word_le(0x0002);  // Length = 2
   add_word(0xCDAB);    // Data
-  add_word_le(0x1234); // Wrong CRC lower
-  add_word_le(0x5678); // Wrong CRC upper
+  add_word_le(0x1234);  // Wrong CRC lower
+  add_word_le(0x5678);  // Wrong CRC upper
 
   EXPECT_FALSE(decoder_->hasDecodedFrame());
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-int main(int argc, char **argv) {
+int main(int argc, char ** argv)
+{
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

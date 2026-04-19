@@ -14,12 +14,13 @@
 
 #include <gtest/gtest.h>
 
-#include "lighthouse_protocol_decoder/crc32.hpp"
-
 #include <string>
 #include <vector>
 
-namespace lighthouse_protocol_decoder {
+#include "lighthouse_protocol_decoder/crc32.hpp"
+
+namespace lighthouse_protocol_decoder
+{
 
 class CRC32Test : public ::testing::Test {};
 
@@ -51,7 +52,7 @@ TEST_F(CRC32Test, KnownASCIIString) {
   // Test with a known ASCII string "123456789"
   // This is a standard test vector for CRC32
   std::vector<std::uint8_t> data = {'1', '2', '3', '4', '5',
-                                    '6', '7', '8', '9'};
+    '6', '7', '8', '9'};
   const std::uint32_t crc = calculateCRC32(data);
 
   EXPECT_EQ(crc, 0xCBF43926);
@@ -134,7 +135,7 @@ TEST_F(CRC32Test, LargeData) {
 
   const auto crc = calculateCRC32(data);
   // The exact value depends on the repeating pattern
-  EXPECT_NE(crc, 0xFFFFFFFF); // Should not be the initial value
+  EXPECT_NE(crc, 0xFFFFFFFF);  // Should not be the initial value
 }
 
 TEST_F(CRC32Test, TwoBytePayload) {
@@ -149,7 +150,7 @@ TEST_F(CRC32Test, SingleBitDifference) {
   // Verify that a single bit difference changes the CRC
   const std::vector<std::uint8_t> data1 = {0x00, 0x00, 0x00};
   const std::vector<std::uint8_t> data2 = {0x01, 0x00,
-                                           0x00}; // One bit different
+    0x00};                                        // One bit different
 
   const auto crc1 = calculateCRC32(data1);
   const auto crc2 = calculateCRC32(data2);
@@ -157,4 +158,4 @@ TEST_F(CRC32Test, SingleBitDifference) {
   EXPECT_NE(crc1, crc2);
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

@@ -14,16 +14,17 @@
 
 #include <gtest/gtest.h>
 
-#include "lighthouse_protocol_decoder/lighthouse_protocol_decoder.hpp"
-#include "lighthouse_protocol_decoder/logger.hpp"
-#include "test_helpers.hpp"
-
 #include <cmath>
 #include <map>
 #include <string>
 #include <vector>
 
-namespace lighthouse_protocol_decoder {
+#include "lighthouse_protocol_decoder/lighthouse_protocol_decoder.hpp"
+#include "lighthouse_protocol_decoder/logger.hpp"
+#include "test_helpers.hpp"
+
+namespace lighthouse_protocol_decoder
+{
 
 using test_helpers::createCompleteMeasurement;
 using test_helpers::createDataFrame;
@@ -35,31 +36,36 @@ using test_helpers::makeNpoly;
 // Test Fixture
 // ===========================================================================
 
-class LighthouseProtocolDecoderTest : public ::testing::Test {
+class LighthouseProtocolDecoderTest : public ::testing::Test
+{
 protected:
-  void SetUp() override {
+  void SetUp() override
+  {
     received_bearings_.clear();
 
     decoder_ = std::make_unique<LighthouseProtocolDecoder>(
-        [this](const SweepBlockBearings &bearings) {
-          received_bearings_.push_back(bearings);
-        },
-        nullptr);
+      [this](const SweepBlockBearings & bearings) {
+        received_bearings_.push_back(bearings);
+      },
+      nullptr);
   }
 
   /// Send bytes to the decoder
-  void sendBytes(const std::vector<std::uint8_t> &bytes) {
+  void sendBytes(const std::vector<std::uint8_t> & bytes)
+  {
     for (auto byte : bytes) {
       decoder_->processByte(byte);
     }
   }
 
   /// Send a complete protocol sequence (sync frame + data)
-  void sendProtocolSequence(const std::vector<std::uint8_t> &data) {
+  void sendProtocolSequence(const std::vector<std::uint8_t> & data)
+  {
     // First send sync frame to enter DATA mode
     sendBytes(createSyncFrame());
-    EXPECT_EQ(decoder_->getCurrentMode(),
-              LighthouseProtocolDecoder::Mode::DATA);
+    EXPECT_EQ(
+      decoder_->getCurrentMode(),
+      LighthouseProtocolDecoder::Mode::DATA);
 
     // Then send the actual data
     sendBytes(data);
@@ -95,9 +101,10 @@ TEST_F(LighthouseProtocolDecoderTest, ResetReturnsToSyncMode) {
 TEST_F(LighthouseProtocolDecoderTest, ConstructorWorksWithoutCallback) {
   // Verify constructor works without callback
   auto decoder_no_callback =
-      std::make_unique<LighthouseProtocolDecoder>(nullptr, nullptr);
-  EXPECT_EQ(decoder_no_callback->getCurrentMode(),
-            LighthouseProtocolDecoder::Mode::SYNC);
+    std::make_unique<LighthouseProtocolDecoder>(nullptr, nullptr);
+  EXPECT_EQ(
+    decoder_no_callback->getCurrentMode(),
+    LighthouseProtocolDecoder::Mode::SYNC);
 }
 
 // ===========================================================================
@@ -106,11 +113,11 @@ TEST_F(LighthouseProtocolDecoderTest, ConstructorWorksWithoutCallback) {
 
 TEST_F(LighthouseProtocolDecoderTest, SingleBasestationCompleteMeasurement) {
   // Create a complete measurement sequence from a single basestation
-  const std::uint8_t base_station_id = 5; // Arbitrary basestation ID
+  const std::uint8_t base_station_id = 5;  // Arbitrary basestation ID
   const std::uint32_t base_timestamp = 1000000;
 
   auto measurement_data =
-      createCompleteMeasurement(base_station_id, base_timestamp);
+    createCompleteMeasurement(base_station_id, base_timestamp);
 
   // Send the protocol sequence
   sendProtocolSequence(measurement_data);
@@ -119,24 +126,24 @@ TEST_F(LighthouseProtocolDecoderTest, SingleBasestationCompleteMeasurement) {
   // The exact number depends on the measurement processor's matching logic
   // At minimum, we should get at least one measurement
   ASSERT_GT(received_bearings_.size(), 0)
-      << "Expected at least one bearing measurement";
+    << "Expected at least one bearing measurement";
 
   // Verify that all received bearings are from the correct basestation
-  for (const auto &bearing : received_bearings_) {
+  for (const auto & bearing : received_bearings_) {
     EXPECT_EQ(bearing.base_station_id, base_station_id)
-        << "Bearing from unexpected basestation";
+      << "Bearing from unexpected basestation";
 
     // Verify that azimuth and elevation values are reasonable
     // (not NaN, not infinite)
     for (std::size_t sensor = 0; sensor < kPulseProcessorNSensors; ++sensor) {
       EXPECT_FALSE(std::isnan(bearing.sensor_angles[sensor].azimuth))
-          << "Sensor " << sensor << " azimuth is NaN";
+        << "Sensor " << sensor << " azimuth is NaN";
       EXPECT_FALSE(std::isnan(bearing.sensor_angles[sensor].elevation))
-          << "Sensor " << sensor << " elevation is NaN";
+        << "Sensor " << sensor << " elevation is NaN";
       EXPECT_FALSE(std::isinf(bearing.sensor_angles[sensor].azimuth))
-          << "Sensor " << sensor << " azimuth is infinite";
+        << "Sensor " << sensor << " azimuth is infinite";
       EXPECT_FALSE(std::isinf(bearing.sensor_angles[sensor].elevation))
-          << "Sensor " << sensor << " elevation is infinite";
+        << "Sensor " << sensor << " elevation is infinite";
     }
   }
 }
@@ -154,17 +161,17 @@ TEST_F(LighthouseProtocolDecoderTest, SingleBasestationMultipleRounds) {
   const int num_rounds = 5;
   for (int round = 0; round < num_rounds; ++round) {
     auto measurement_data =
-        createCompleteMeasurement(base_station_id, timestamp);
+      createCompleteMeasurement(base_station_id, timestamp);
     sendBytes(measurement_data);
     timestamp = (timestamp + 500000) & kTimestampCounterMask;
   }
 
   // We should receive measurements from all rounds
   EXPECT_GT(received_bearings_.size(), 0)
-      << "Expected measurements from multiple rounds";
+    << "Expected measurements from multiple rounds";
 
   // Verify all bearings are from the correct basestation
-  for (const auto &bearing : received_bearings_) {
+  for (const auto & bearing : received_bearings_) {
     EXPECT_EQ(bearing.base_station_id, base_station_id);
   }
 }
@@ -179,34 +186,34 @@ TEST_F(LighthouseProtocolDecoderTest, FourBasestationsInterleaved) {
   const std::uint32_t base_timestamp = 2000000;
 
   auto interleaved_data =
-      createInterleavedMeasurements(base_station_ids, base_timestamp);
+    createInterleavedMeasurements(base_station_ids, base_timestamp);
 
   // Send the protocol sequence
   sendProtocolSequence(interleaved_data);
 
   // We expect to receive bearing measurements from multiple basestations
   ASSERT_GT(received_bearings_.size(), 0)
-      << "Expected bearing measurements from multiple basestations";
+    << "Expected bearing measurements from multiple basestations";
 
   // Count measurements per basestation
   std::map<std::uint8_t, int> measurements_per_basestation;
-  for (const auto &bearing : received_bearings_) {
+  for (const auto & bearing : received_bearings_) {
     measurements_per_basestation[bearing.base_station_id]++;
 
     // Verify bearing values are reasonable
     for (std::size_t sensor = 0; sensor < kPulseProcessorNSensors; ++sensor) {
       EXPECT_FALSE(std::isnan(bearing.sensor_angles[sensor].azimuth))
-          << "BS " << static_cast<int>(bearing.base_station_id) << " Sensor "
-          << sensor << " azimuth is NaN";
+        << "BS " << static_cast<int>(bearing.base_station_id) << " Sensor "
+        << sensor << " azimuth is NaN";
       EXPECT_FALSE(std::isnan(bearing.sensor_angles[sensor].elevation))
-          << "BS " << static_cast<int>(bearing.base_station_id) << " Sensor "
-          << sensor << " elevation is NaN";
+        << "BS " << static_cast<int>(bearing.base_station_id) << " Sensor "
+        << sensor << " elevation is NaN";
     }
   }
 
   // Verify we got measurements from multiple basestations
   EXPECT_GT(measurements_per_basestation.size(), 1)
-      << "Expected measurements from multiple basestations";
+    << "Expected measurements from multiple basestations";
 
   // Log the distribution for debugging
   for (const auto &[bs_id, count] : measurements_per_basestation) {
@@ -233,17 +240,17 @@ TEST_F(LighthouseProtocolDecoderTest, FourBasestationsSequential) {
 
   // Verify we received measurements
   ASSERT_GT(received_bearings_.size(), 0)
-      << "Expected bearing measurements from all basestations";
+    << "Expected bearing measurements from all basestations";
 
   // Count unique basestations
   std::set<std::uint8_t> unique_basestations;
-  for (const auto &bearing : received_bearings_) {
+  for (const auto & bearing : received_bearings_) {
     unique_basestations.insert(bearing.base_station_id);
   }
 
   // We should see measurements from multiple basestations
   EXPECT_GT(unique_basestations.size(), 1)
-      << "Expected measurements from multiple basestations";
+    << "Expected measurements from multiple basestations";
 
   // Log results
   std::cout << "Received measurements from " << unique_basestations.size()
@@ -267,24 +274,24 @@ TEST_F(LighthouseProtocolDecoderTest, FourBasestationsConcurrent) {
   const int num_rounds = 3;
   for (int round = 0; round < num_rounds; ++round) {
     auto interleaved_data =
-        createInterleavedMeasurements(base_station_ids, timestamp);
+      createInterleavedMeasurements(base_station_ids, timestamp);
     sendBytes(interleaved_data);
     timestamp = (timestamp + 1000000) & kTimestampCounterMask;
   }
 
   // Verify we received measurements
   ASSERT_GT(received_bearings_.size(), 0)
-      << "Expected bearing measurements from concurrent basestations";
+    << "Expected bearing measurements from concurrent basestations";
 
   // Analyze the distribution
   std::map<std::uint8_t, int> measurements_per_basestation;
-  for (const auto &bearing : received_bearings_) {
+  for (const auto & bearing : received_bearings_) {
     measurements_per_basestation[bearing.base_station_id]++;
   }
 
   // We should have measurements from multiple basestations
   EXPECT_GT(measurements_per_basestation.size(), 1)
-      << "Expected measurements from multiple basestations in concurrent mode";
+    << "Expected measurements from multiple basestations in concurrent mode";
 
   // Report statistics
   std::cout << "Concurrent test - Total measurements: "
@@ -306,7 +313,7 @@ TEST_F(LighthouseProtocolDecoderTest, BadPaddingSwitchesBackToSyncMode) {
 
   // Send a data frame with bad padding (padding_1 = 1)
   auto bad_frame =
-      createDataFrame(0, makeNpoly(1, true, 0), 100, 25000, 1, 0, 0, 100000);
+    createDataFrame(0, makeNpoly(1, true, 0), 100, 25000, 1, 0, 0, 100000);
   sendBytes(bad_frame);
 
   // Decoder should switch back to SYNC mode due to bad padding
@@ -325,8 +332,9 @@ TEST_F(LighthouseProtocolDecoderTest, MixedValidAndInvalidData) {
   const auto initial_bearing_count = received_bearings_.size();
 
   // Send a bad frame
-  auto bad_frame = createDataFrame(0, makeNpoly(bs_id, true, 0), 100, 25000, 1,
-                                   0, 0, 5100000);
+  auto bad_frame = createDataFrame(
+    0, makeNpoly(bs_id, true, 0), 100, 25000, 1,
+    0, 0, 5100000);
   sendBytes(bad_frame);
 
   // Should be back in SYNC mode
@@ -336,4 +344,4 @@ TEST_F(LighthouseProtocolDecoderTest, MixedValidAndInvalidData) {
   EXPECT_GE(received_bearings_.size(), initial_bearing_count);
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

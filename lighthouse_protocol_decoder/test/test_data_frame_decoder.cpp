@@ -14,29 +14,32 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <vector>
+
 #include "lighthouse_protocol_decoder/data_frame_decoder.hpp"
 #include "lighthouse_protocol_decoder/logger.hpp"
 #include "test_helpers.hpp"
 
-#include <string>
-#include <vector>
-
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 using test_helpers::createDataFrame;
 
-class DataFrameDecoderTest : public ::testing::Test {
+class DataFrameDecoderTest : public ::testing::Test
+{
 protected:
-  void SetUp() override {
+  void SetUp() override
+  {
     decoded_frames_.clear();
     good_sync_flags_.clear();
 
     decoder_ = std::make_unique<DataFrameDecoder>(
-        [this](bool good_sync, const DataFrameContents &frame) {
-          good_sync_flags_.push_back(good_sync);
-          decoded_frames_.push_back(frame);
-        },
-        nullptr);
+      [this](bool good_sync, const DataFrameContents & frame) {
+        good_sync_flags_.push_back(good_sync);
+        decoded_frames_.push_back(frame);
+      },
+      nullptr);
   }
 
   std::unique_ptr<DataFrameDecoder> decoder_;
@@ -53,9 +56,9 @@ TEST_F(DataFrameDecoderTest, ConstructorWorksWithoutLogger) {
   // Verify constructor works with nullptr logger (default)
   std::vector<DataFrameContents> frames;
   auto decoder_no_logger = std::make_unique<DataFrameDecoder>(
-      [&frames](bool, const DataFrameContents &frame) {
-        frames.push_back(frame);
-      });
+    [&frames](bool, const DataFrameContents & frame) {
+      frames.push_back(frame);
+    });
   EXPECT_TRUE(decoder_no_logger->hasGoodSync());
 }
 
@@ -186,14 +189,15 @@ TEST_F(DataFrameDecoderTest, DecodesTimestampField) {
 
 TEST_F(DataFrameDecoderTest, DecodesAllFieldsTogether) {
   // Test all fields with non-zero values to ensure proper bit packing
-  auto frame = createDataFrame(2,       // sid (2 bits)
-                               0x2A,    // npoly (6 bits)
-                               0xABCD,  // width (16 bits)
-                               0x15678, // sync_offset (17 bits)
-                               0,       // padding_1 (must be 0 for valid frame)
-                               0x1BCDE, // beam_word (17 bits)
-                               0,       // padding_2 (must be 0 for valid frame)
-                               0xFEDCBA // timestamp (24 bits)
+  auto frame = createDataFrame(
+    2,                                  // sid (2 bits)
+    0x2A,                               // npoly (6 bits)
+    0xABCD,                             // width (16 bits)
+    0x15678,                            // sync_offset (17 bits)
+    0,                                  // padding_1 (must be 0 for valid frame)
+    0x1BCDE,                            // beam_word (17 bits)
+    0,                                  // padding_2 (must be 0 for valid frame)
+    0xFEDCBA                            // timestamp (24 bits)
   );
 
   for (auto byte : frame) {
@@ -214,7 +218,7 @@ TEST_F(DataFrameDecoderTest, DecodesAllFieldsTogether) {
 
 TEST_F(DataFrameDecoderTest, StoresRawData) {
   std::vector<std::uint8_t> frame = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
-                                     0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C};
+    0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C};
 
   for (auto byte : frame) {
     decoder_->processByte(byte);
@@ -317,4 +321,4 @@ TEST_F(DataFrameDecoderTest, BufferClearsAfterFrame) {
   EXPECT_EQ(decoded_frames_.size(), 2);
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

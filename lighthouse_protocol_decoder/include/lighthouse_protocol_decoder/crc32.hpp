@@ -18,13 +18,14 @@
 #include <cstdint>
 #include <vector>
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 /// Calculate CRC32 checksum using the standard CRC32 algorithm
 /// @param data The data bytes to calculate checksum for
 /// @return The CRC32 checksum
-std::uint32_t calculateCRC32(const std::vector<std::uint8_t> &data);
+std::uint32_t calculateCRC32(const std::vector<std::uint8_t> & data);
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-#endif // LIGHTHOUSE_PROTOCOL_DECODER__CRC32_HPP_
+#endif  // LIGHTHOUSE_PROTOCOL_DECODER__CRC32_HPP_

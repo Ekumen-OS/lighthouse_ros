@@ -27,24 +27,30 @@ repos:
       - id: trailing-whitespace
         exclude: ^.*/datasets/
 
-  - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v16.0.3
-    hooks:
-      - id: clang-format
-
   - repo: https://github.com/PyCQA/flake8
     rev: 6.0.0
     hooks:
       - id: flake8
         additional_dependencies: [flake8-docstrings]
 
-  - repo: https://github.com/psf/black
-    rev:  23.3.0
-    hooks:
-      - id: black
-        args: [--skip-string-normalization]
-
   - repo: https://github.com/cheshirekow/cmake-format-precommit
     rev: v0.6.13
     hooks:
       - id: cmake-lint
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        name: Lint shell scripts
+        args: [--severity=warning]
+
+  - repo: local
+    hooks:
+      - id: docker-compose-check
+        name: Validate docker-compose files
+        description: Validates docker-compose.yml syntax
+        entry: bash -c 'docker compose -f docker/docker-compose.yml config --quiet'
+        language: system
+        files: docker/docker-compose\.yml
+        pass_filenames: false

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIGHTHOUSE_SHIELD_DRIVER__LIGHTHOUSE_SHIELD_DRIVER_NODE_HPP_
-#define LIGHTHOUSE_SHIELD_DRIVER__LIGHTHOUSE_SHIELD_DRIVER_NODE_HPP_
+#ifndef LIGHTHOUSE_DECK_DRIVER__LIGHTHOUSE_DECK_DRIVER_NODE_HPP_
+#define LIGHTHOUSE_DECK_DRIVER__LIGHTHOUSE_DECK_DRIVER_NODE_HPP_
 
 #include <memory>
 #include <string>
@@ -26,26 +26,33 @@
 
 #include "lighthouse_deck_utils/serial_port.hpp"
 
-namespace lighthouse_deck_driver {
+namespace lighthouse_deck_driver
+{
 
 /// ROS2 Logger adapter for the lighthouse protocol decoder
-class ROS2LoggerAdapter : public lighthouse_protocol_decoder::LoggerInterface {
+class ROS2LoggerAdapter : public lighthouse_protocol_decoder::LoggerInterface
+{
 public:
-  explicit ROS2LoggerAdapter(rclcpp::Logger logger) : logger_(logger) {}
+  explicit ROS2LoggerAdapter(rclcpp::Logger logger)
+  : logger_(logger) {}
 
-  void debug(const std::string &message) override {
+  void debug(const std::string & message) override
+  {
     RCLCPP_DEBUG(logger_, "%s", message.c_str());
   }
 
-  void info(const std::string &message) override {
+  void info(const std::string & message) override
+  {
     RCLCPP_INFO(logger_, "%s", message.c_str());
   }
 
-  void warning(const std::string &message) override {
+  void warning(const std::string & message) override
+  {
     RCLCPP_WARN(logger_, "%s", message.c_str());
   }
 
-  void error(const std::string &message) override {
+  void error(const std::string & message) override
+  {
     RCLCPP_ERROR(logger_, "%s", message.c_str());
   }
 
@@ -53,16 +60,17 @@ private:
   rclcpp::Logger logger_;
 };
 
-class LighthouseDeckDriverNode : public rclcpp::Node {
+class LighthouseDeckDriverNode : public rclcpp::Node
+{
 public:
-  explicit LighthouseDeckDriverNode(const rclcpp::NodeOptions &options);
+  explicit LighthouseDeckDriverNode(const rclcpp::NodeOptions & options);
   ~LighthouseDeckDriverNode() override;
 
 private:
   void initializeSerial();
-  void receiveCallback(const uint8_t *data, std::size_t length);
+  void receiveCallback(const uint8_t * data, std::size_t length);
   void bearingCallback(
-      const lighthouse_protocol_decoder::SweepBlockBearings &sensor_bearings);
+    const lighthouse_protocol_decoder::SweepBlockBearings & sensor_bearings);
 
   std::string device_;
   int baudrate_;
@@ -70,14 +78,14 @@ private:
 
   std::unique_ptr<lighthouse_deck_utils::SerialPort> serial_port_;
   std::unique_ptr<lighthouse_protocol_decoder::LighthouseProtocolDecoder>
-      protocol_decoder_;
+  protocol_decoder_;
   std::shared_ptr<ROS2LoggerAdapter> logger_adapter_;
   rclcpp::Publisher<lighthouse_deck_msgs::msg::LighthouseDeckMeasurement>::
-      SharedPtr bearings_publisher_;
+  SharedPtr bearings_publisher_;
 
-  static constexpr int BOOTLOADER_BAUDRATE = 115200;
+  static constexpr int BOOTLOADER_BAUDRATE = 115200;  //
 };
 
-} // namespace lighthouse_deck_driver
+}  // namespace lighthouse_deck_driver
 
-#endif // LIGHTHOUSE_SHIELD_DRIVER__LIGHTHOUSE_SHIELD_DRIVER_NODE_HPP_
+#endif  // LIGHTHOUSE_DECK_DRIVER__LIGHTHOUSE_DECK_DRIVER_NODE_HPP_

@@ -20,14 +20,17 @@
 
 using spb = asio::serial_port_base;
 
-namespace lighthouse_deck_utils {
+namespace lighthouse_deck_utils
+{
 
 SerialPort::SerialPort() = default;
 
-SerialPort::~SerialPort() { close(); }
+SerialPort::~SerialPort() {close();}
 
-bool SerialPort::open(const std::string &port_path,
-                      const PortConfiguration &config) {
+bool SerialPort::open(
+  const std::string & port_path,
+  const PortConfiguration & config)
+{
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (serial_port_ && serial_port_->is_open()) {
@@ -39,21 +42,23 @@ bool SerialPort::open(const std::string &port_path,
 
     applyConfiguration(config);
 
-    io_thread_ = std::make_unique<std::thread>([this]() {
-      asio::io_context::work work(io_context_);
-      io_context_.run();
-    });
+    io_thread_ = std::make_unique<std::thread>(
+      [this]() {
+        asio::io_context::work work(io_context_);
+        io_context_.run();
+      });
 
     startAsyncRead();
 
     return true;
-  } catch (const std::system_error &e) {
+  } catch (const std::system_error & e) {
     serial_port_.reset();
     return false;
   }
 }
 
-void SerialPort::close() {
+void SerialPort::close()
+{
   if (serial_port_ && serial_port_->is_open()) {
     io_context_.stop();
 
@@ -71,16 +76,19 @@ void SerialPort::close() {
   }
 }
 
-bool SerialPort::isOpen() const {
+bool SerialPort::isOpen() const
+{
   std::lock_guard<std::mutex> lock(mutex_);
   return internalIsOpen();
 }
 
-bool SerialPort::internalIsOpen() const {
+bool SerialPort::internalIsOpen() const
+{
   return serial_port_ && serial_port_->is_open();
 }
 
-bool SerialPort::setConfiguration(const PortConfiguration &config) {
+bool SerialPort::setConfiguration(const PortConfiguration & config)
+{
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (!internalIsOpen()) {
@@ -90,12 +98,13 @@ bool SerialPort::setConfiguration(const PortConfiguration &config) {
   try {
     applyConfiguration(config);
     return true;
-  } catch (const std::system_error &e) {
+  } catch (const std::system_error & e) {
     return false;
   }
 }
 
-bool SerialPort::send(const uint8_t *data, std::size_t size) {
+bool SerialPort::send(const uint8_t * data, std::size_t size)
+{
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (!internalIsOpen()) {
@@ -106,17 +115,18 @@ bool SerialPort::send(const uint8_t *data, std::size_t size) {
   auto future = promise->get_future();
 
   asio::async_write(
-      *serial_port_, asio::buffer(data, size),
-      [promise](const std::error_code &error, std::size_t bytes_transferred) {
-        (void)bytes_transferred;
-        promise->set_value(error);
-      });
+    *serial_port_, asio::buffer(data, size),
+    [promise](const std::error_code & error, std::size_t bytes_transferred) {
+      (void)bytes_transferred;
+      promise->set_value(error);
+    });
 
-  std::error_code error = future.get(); // block until done
+  std::error_code error = future.get();  // block until done
   return !error;
 }
 
-void SerialPort::sendBreak() {
+void SerialPort::sendBreak()
+{
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (!internalIsOpen()) {
@@ -127,91 +137,102 @@ void SerialPort::sendBreak() {
   serial_port_->send_break(ec);
 }
 
-void SerialPort::setCallback(ReceiveCallback callback) {
+void SerialPort::setCallback(ReceiveCallback callback)
+{
   std::lock_guard<std::mutex> lock(mutex_);
   receive_callback_ = std::move(callback);
 }
 
-void SerialPort::startAsyncRead() {
+void SerialPort::startAsyncRead()
+{
   if (!internalIsOpen()) {
     return;
   }
 
   serial_port_->async_read_some(
-      asio::buffer(read_buffer_),
-      [this](const std::error_code &error, std::size_t bytes_transferred) {
-        if (!error && bytes_transferred > 0) {
-          {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (receive_callback_) {
-              receive_callback_(read_buffer_.data(), bytes_transferred);
-            }
+    asio::buffer(read_buffer_),
+    [this](const std::error_code & error, std::size_t bytes_transferred) {
+      if (!error && bytes_transferred > 0) {
+        {
+          std::lock_guard<std::mutex> lock(mutex_);
+          if (receive_callback_) {
+            receive_callback_(read_buffer_.data(), bytes_transferred);
           }
-
-          startAsyncRead();
-        } else if (error == asio::error::operation_aborted) {
-          return;
-        } else {
-          startAsyncRead();
         }
-      });
+
+        startAsyncRead();
+      } else if (error == asio::error::operation_aborted) {
+        return;
+      } else {
+        startAsyncRead();
+      }
+    });
 }
 
-void SerialPort::applyConfiguration(const PortConfiguration &config) {
+void SerialPort::applyConfiguration(const PortConfiguration & config)
+{
   if (!serial_port_) {
     throw std::runtime_error("Serial port not initialized");
   }
 
-  serial_port_->set_option(asio::serial_port_base::baud_rate(
+  serial_port_->set_option(
+    asio::serial_port_base::baud_rate(
       static_cast<unsigned int>(config.baud_rate)));
 
-  serial_port_->set_option(asio::serial_port_base::character_size(
+  serial_port_->set_option(
+    asio::serial_port_base::character_size(
       static_cast<unsigned int>(config.data_bits)));
 
   switch (config.stop_bits) {
-  case StopBits::ONE:
-    serial_port_->set_option(asio::serial_port_base::stop_bits(
-        asio::serial_port_base::stop_bits::one));
-    break;
-  case StopBits::ONE_POINT_FIVE:
-    serial_port_->set_option(asio::serial_port_base::stop_bits(
-        asio::serial_port_base::stop_bits::onepointfive));
-    break;
-  case StopBits::TWO:
-    serial_port_->set_option(asio::serial_port_base::stop_bits(
-        asio::serial_port_base::stop_bits::two));
-    break;
+    case StopBits::ONE:
+      serial_port_->set_option(
+        asio::serial_port_base::stop_bits(
+          asio::serial_port_base::stop_bits::one));
+      break;
+    case StopBits::ONE_POINT_FIVE:
+      serial_port_->set_option(
+        asio::serial_port_base::stop_bits(
+          asio::serial_port_base::stop_bits::onepointfive));
+      break;
+    case StopBits::TWO:
+      serial_port_->set_option(
+        asio::serial_port_base::stop_bits(
+          asio::serial_port_base::stop_bits::two));
+      break;
   }
 
   switch (config.parity) {
-  case Parity::NONE:
-    serial_port_->set_option(
+    case Parity::NONE:
+      serial_port_->set_option(
         asio::serial_port_base::parity(asio::serial_port_base::parity::none));
-    break;
-  case Parity::ODD:
-    serial_port_->set_option(
+      break;
+    case Parity::ODD:
+      serial_port_->set_option(
         asio::serial_port_base::parity(asio::serial_port_base::parity::odd));
-    break;
-  case Parity::EVEN:
-    serial_port_->set_option(
+      break;
+    case Parity::EVEN:
+      serial_port_->set_option(
         asio::serial_port_base::parity(asio::serial_port_base::parity::even));
-    break;
+      break;
   }
 
   switch (config.flow_control) {
-  case FlowControl::NONE:
-    serial_port_->set_option(asio::serial_port_base::flow_control(
-        asio::serial_port_base::flow_control::none));
-    break;
-  case FlowControl::SOFTWARE:
-    serial_port_->set_option(asio::serial_port_base::flow_control(
-        asio::serial_port_base::flow_control::software));
-    break;
-  case FlowControl::HARDWARE:
-    serial_port_->set_option(asio::serial_port_base::flow_control(
-        asio::serial_port_base::flow_control::hardware));
-    break;
+    case FlowControl::NONE:
+      serial_port_->set_option(
+        asio::serial_port_base::flow_control(
+          asio::serial_port_base::flow_control::none));
+      break;
+    case FlowControl::SOFTWARE:
+      serial_port_->set_option(
+        asio::serial_port_base::flow_control(
+          asio::serial_port_base::flow_control::software));
+      break;
+    case FlowControl::HARDWARE:
+      serial_port_->set_option(
+        asio::serial_port_base::flow_control(
+          asio::serial_port_base::flow_control::hardware));
+      break;
   }
 }
 
-} // namespace lighthouse_deck_utils
+}  // namespace lighthouse_deck_utils

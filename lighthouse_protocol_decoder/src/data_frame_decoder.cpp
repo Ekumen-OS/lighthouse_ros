@@ -17,24 +17,29 @@
 #include <algorithm>
 #include <cassert>
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
-DataFrameDecoder::DataFrameDecoder(DataFrameCallback data_callback,
-                                   LoggerInterface::Ptr logger)
-    : good_sync_(true), data_callback_(std::move(data_callback)),
-      logger_(std::move(logger)) {
+DataFrameDecoder::DataFrameDecoder(
+  DataFrameCallback data_callback,
+  LoggerInterface::Ptr logger)
+: good_sync_(true), data_callback_(std::move(data_callback)),
+  logger_(std::move(logger))
+{
   frame_buffer_.reserve(12);
 }
 
-void DataFrameDecoder::processByte(std::uint8_t byte) {
+void DataFrameDecoder::processByte(std::uint8_t byte)
+{
   frame_buffer_.push_back(byte);
 
   if (frame_buffer_.size() == 12) {
     // Check if this is a sync frame (all 0xFF) and if so ignore it
-    const bool is_sync = std::all_of(              //
-        frame_buffer_.begin(),                     //
-        frame_buffer_.end(),                       //
-        [](std::uint8_t b) { return b == 0xFF; }); //
+    const bool is_sync = std::all_of(
+      //
+      frame_buffer_.begin(),                       //
+      frame_buffer_.end(),                         //
+      [](std::uint8_t b) {return b == 0xFF;});     //
 
     if (!is_sync) {
       // Decode the data frame
@@ -59,14 +64,17 @@ void DataFrameDecoder::processByte(std::uint8_t byte) {
   }
 }
 
-void DataFrameDecoder::reset() {
+void DataFrameDecoder::reset()
+{
   frame_buffer_.clear();
   good_sync_ = true;
 }
 
 std::uint32_t
-DataFrameDecoder::readField(const std::vector<std::uint8_t> &frame_buffer,
-                            std::size_t start_bit, std::size_t bit_width) {
+DataFrameDecoder::readField(
+  const std::vector<std::uint8_t> & frame_buffer,
+  std::size_t start_bit, std::size_t bit_width)
+{
   std::uint32_t field_value = 0;
 
   for (auto i = 0u; i < bit_width; ++i) {
@@ -75,7 +83,7 @@ DataFrameDecoder::readField(const std::vector<std::uint8_t> &frame_buffer,
     const auto n_bit = current_bit % 8;
 
     const auto bit =
-        static_cast<std::uint32_t>((frame_buffer[n_byte] >> n_bit) & 1);
+      static_cast<std::uint32_t>((frame_buffer[n_byte] >> n_bit) & 1);
     field_value |= (bit << i);
   }
 
@@ -83,7 +91,8 @@ DataFrameDecoder::readField(const std::vector<std::uint8_t> &frame_buffer,
 }
 
 DataFrameContents
-DataFrameDecoder::decodeFrame(const std::vector<std::uint8_t> &frame_buffer) {
+DataFrameDecoder::decodeFrame(const std::vector<std::uint8_t> & frame_buffer)
+{
   assert(frame_buffer.size() == 12);
 
   DataFrameContents frame;
@@ -93,10 +102,10 @@ DataFrameDecoder::decodeFrame(const std::vector<std::uint8_t> &frame_buffer) {
   frame.width = static_cast<std::uint16_t>(readField(frame_buffer, 0 + 8, 16));
   frame.sync_offset = readField(frame_buffer, 24 + 0, 17);
   frame.padding_1 =
-      static_cast<std::uint8_t>(readField(frame_buffer, 24 + 17, 7));
+    static_cast<std::uint8_t>(readField(frame_buffer, 24 + 17, 7));
   frame.beam_word = readField(frame_buffer, 48 + 0, 17);
   frame.padding_2 =
-      static_cast<std::uint8_t>(readField(frame_buffer, 48 + 17, 7));
+    static_cast<std::uint8_t>(readField(frame_buffer, 48 + 17, 7));
   frame.timestamp = readField(frame_buffer, 72 + 0, 24);
 
   // Offset is expressed in a 6 MHz clock, while the timestamp uses a 24 MHz
@@ -108,4 +117,4 @@ DataFrameDecoder::decodeFrame(const std::vector<std::uint8_t> &frame_buffer) {
   return frame;
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

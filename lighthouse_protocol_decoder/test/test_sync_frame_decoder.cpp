@@ -14,21 +14,24 @@
 
 #include <gtest/gtest.h>
 
-#include "lighthouse_protocol_decoder/logger.hpp"
-#include "lighthouse_protocol_decoder/sync_frame_decoder.hpp"
-
 #include <string>
 #include <vector>
 
-namespace lighthouse_protocol_decoder {
+#include "lighthouse_protocol_decoder/logger.hpp"
+#include "lighthouse_protocol_decoder/sync_frame_decoder.hpp"
 
-class SyncFrameDecoderTest : public ::testing::Test {
+namespace lighthouse_protocol_decoder
+{
+
+class SyncFrameDecoderTest : public ::testing::Test
+{
 protected:
-  void SetUp() override {
+  void SetUp() override
+  {
     sync_detected_count_ = 0;
 
     decoder_ = std::make_unique<SyncFrameDecoder>(
-        [this]() { sync_detected_count_++; }, nullptr);
+      [this]() {sync_detected_count_++;}, nullptr);
   }
 
   std::unique_ptr<SyncFrameDecoder> decoder_;
@@ -39,7 +42,7 @@ TEST_F(SyncFrameDecoderTest, ConstructorWorksWithoutLogger) {
   // Verify constructor works with nullptr logger (default)
   int count = 0;
   auto decoder_no_logger =
-      std::make_unique<SyncFrameDecoder>([&count]() { count++; });
+    std::make_unique<SyncFrameDecoder>([&count]() {count++;});
   // Send 12 bytes of 0xFF to trigger sync
   for (auto i = 0; i < 12; ++i) {
     decoder_no_logger->processByte(0xFF);
@@ -85,7 +88,7 @@ TEST_F(SyncFrameDecoderTest, NoSyncWithMixedBytes) {
   for (auto i = 0; i < 11; ++i) {
     decoder_->processByte(0xFF);
   }
-  decoder_->processByte(0xFE); // Different byte
+  decoder_->processByte(0xFE);  // Different byte
 
   EXPECT_EQ(sync_detected_count_, 0);
 }
@@ -174,4 +177,4 @@ TEST_F(SyncFrameDecoderTest, ContinuousFFStream) {
   EXPECT_EQ(sync_detected_count_, 13);
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

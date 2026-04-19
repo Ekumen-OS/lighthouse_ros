@@ -20,11 +20,13 @@
 #include "ros2_control_test_assets/components_urdfs.hpp"
 #include "ros2_control_test_assets/descriptions.hpp"
 
-class TestLighthouseDeckHardware : public ::testing::Test {
+class TestLighthouseDeckHardware : public ::testing::Test
+{
 protected:
-  void SetUp() override {
+  void SetUp() override
+  {
     hardware_lighthouse_deck_ =
-        R"(
+      R"(
   <ros2_control name="LighthouseDeckHardware" type="sensor">
     <hardware>
       <plugin>lighthouse_deck_hardware/LighthouseDeckHardware</plugin>
@@ -54,11 +56,11 @@ protected:
 
 TEST_F(TestLighthouseDeckHardware, load_lighthouse_deck_hardware) {
   auto urdf = ros2_control_test_assets::urdf_head + hardware_lighthouse_deck_ +
-              ros2_control_test_assets::urdf_tail;
+    ros2_control_test_assets::urdf_tail;
   // sadly ASSERT_NO_THROW does not show information about what was thrown
   try {
     hardware_interface::ResourceManager uut(urdf);
-  } catch (const std::exception &e) {
+  } catch (const std::exception & e) {
     FAIL() << "Exception thrown while loading LighthouseDeckHardware: "
            << e.what();
   } catch (...) {

@@ -24,27 +24,30 @@
 
 #include "lighthouse_protocol_decoder/constants.hpp"
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 class LoggerInterface;   // Forward declaration
-class DataFrameContents; // Forward declaration
+class DataFrameContents;  // Forward declaration
 
 /// Callback function invoked when a sync frame is detected
-using SyncFrameDetectedCallback = std::function<void()>;
+using SyncFrameDetectedCallback = std::function<void ()>;
 
 /// Callback function invoked when a data frame is decoded
 /// @param good_sync Indicates if synchronization is good
 /// @param frame_data The decoded frame contents
-using DataFrameCallback = std::function<void(bool, const DataFrameContents &)>;
+using DataFrameCallback = std::function<void (bool, const DataFrameContents &)>;
 
 /// Raw measurement from a single sensor
-struct SensorRawMeasurement {
+struct SensorRawMeasurement
+{
   /// Normalized offset value in ticks
   std::uint32_t normalized_offset{0};
 };
 
 /// Complete sweep data from all sensors for one sweep
-struct SweepBlockRawData {
+struct SweepBlockRawData
+{
   /// Base station ID
   std::uint8_t base_station_id{0};
 
@@ -56,7 +59,8 @@ struct SweepBlockRawData {
 };
 
 /// Bearing angles for a single sensor
-struct SingleSensorBearing {
+struct SingleSensorBearing
+{
   /// Azimuth angle in degrees
   double azimuth{0.0};
 
@@ -65,7 +69,8 @@ struct SingleSensorBearing {
 };
 
 /// Bearing measurements for all sensors from a matched sweep pair
-struct SweepBlockBearings {
+struct SweepBlockBearings
+{
   /// Base station ID
   std::uint8_t base_station_id{0};
 
@@ -77,13 +82,14 @@ struct SweepBlockBearings {
 };
 
 /// Callback function invoked when a complete sweep is decoded
-using SweepCallback = std::function<void(const SweepBlockRawData &)>;
+using SweepCallback = std::function<void (const SweepBlockRawData &)>;
 
 /// Callback function invoked when bearing measurements are available
-using BearingCallback = std::function<void(const SweepBlockBearings &)>;
+using BearingCallback = std::function<void (const SweepBlockBearings &)>;
 
 /// Contents of a decoded data frame from the Lighthouse protocol
-struct DataFrameContents {
+struct DataFrameContents
+{
   /// Sensor ID (0-3)
   std::uint8_t sid{0};
 
@@ -124,6 +130,6 @@ struct DataFrameContents {
   std::uint8_t baseStationId() const;
 };
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-#endif // LIGHTHOUSE_PROTOCOL_DECODER__DATATYPES_HPP_
+#endif  // LIGHTHOUSE_PROTOCOL_DECODER__DATATYPES_HPP_

@@ -16,36 +16,40 @@
 
 #include "lighthouse_protocol_decoder/constants.hpp"
 
-namespace lighthouse_protocol_decoder {
-namespace test_helpers {
+namespace lighthouse_protocol_decoder
+{
+namespace test_helpers
+{
 
 std::vector<std::uint8_t>
-createDataFrame(std::uint8_t sid, std::uint8_t npoly, std::uint16_t width,
-                std::uint32_t sync_offset, std::uint8_t padding_1,
-                std::uint32_t beam_word, std::uint8_t padding_2,
-                std::uint32_t timestamp) {
+createDataFrame(
+  std::uint8_t sid, std::uint8_t npoly, std::uint16_t width,
+  std::uint32_t sync_offset, std::uint8_t padding_1,
+  std::uint32_t beam_word, std::uint8_t padding_2,
+  std::uint32_t timestamp)
+{
   std::vector<std::uint8_t> frame(12, 0x00);
 
   // Helper to write a field at a specific bit position
   auto writeField = [&frame](std::uint32_t value, std::size_t start_bit,
-                             std::size_t bit_width) {
-    for (auto i = 0u; i < bit_width; ++i) {
-      const auto current_bit = start_bit + i;
-      const auto byte_index = current_bit / 8;
-      const auto bit_index = current_bit % 8;
+      std::size_t bit_width) {
+      for (auto i = 0u; i < bit_width; ++i) {
+        const auto current_bit = start_bit + i;
+        const auto byte_index = current_bit / 8;
+        const auto bit_index = current_bit % 8;
 
-      const auto bit_value = static_cast<std::uint8_t>((value >> i) & 1);
-      if (bit_value) {
-        frame[byte_index] |= (1 << bit_index);
+        const auto bit_value = static_cast<std::uint8_t>((value >> i) & 1);
+        if (bit_value) {
+          frame[byte_index] |= (1 << bit_index);
+        }
       }
-    }
-  };
+    };
 
   // Write fields according to the frame layout
   writeField(sid, 0, 2);           // sid: bits 0-1
   writeField(npoly, 2, 6);         // npoly: bits 2-7
   writeField(width, 8, 16);        // width: bits 8-23
-  writeField(sync_offset, 24, 17); // sync_offset: bits 24-40
+  writeField(sync_offset, 24, 17);  // sync_offset: bits 24-40
   writeField(padding_1, 41, 7);    // padding_1: bits 41-47
   writeField(beam_word, 48, 17);   // beam_word: bits 48-64
   writeField(padding_2, 65, 7);    // padding_2: bits 65-71
@@ -54,9 +58,11 @@ createDataFrame(std::uint8_t sid, std::uint8_t npoly, std::uint16_t width,
   return frame;
 }
 
-DataFrameContents createDataFrameContents(std::uint8_t sid, std::uint8_t npoly,
-                                          std::uint32_t timestamp,
-                                          std::uint32_t sync_offset) {
+DataFrameContents createDataFrameContents(
+  std::uint8_t sid, std::uint8_t npoly,
+  std::uint32_t timestamp,
+  std::uint32_t sync_offset)
+{
   DataFrameContents frame;
   frame.sid = sid;
   frame.npoly = npoly;
@@ -69,20 +75,23 @@ DataFrameContents createDataFrameContents(std::uint8_t sid, std::uint8_t npoly,
   return frame;
 }
 
-std::uint8_t makeNpoly(std::uint8_t base_station_id, bool valid_npoly,
-                       std::uint8_t slow_bit) {
+std::uint8_t makeNpoly(
+  std::uint8_t base_station_id, bool valid_npoly,
+  std::uint8_t slow_bit)
+{
   // npoly encoding:
   // baseStationId = (npoly / 2) + 1
   // Therefore: npoly = (baseStationId - 1) * 2 + slow_bit
   // bit 5: validity bit (0 = valid, 1 = invalid)
   std::uint8_t npoly = ((base_station_id - 1) * 2) + (slow_bit & 1);
   if (!valid_npoly) {
-    npoly |= (1 << 5); // Set bit 5 to mark as invalid
+    npoly |= (1 << 5);  // Set bit 5 to mark as invalid
   }
   return npoly;
 }
 
-std::uint32_t makeBeamWord(std::uint8_t axis, std::uint8_t data_bit) {
+std::uint32_t makeBeamWord(std::uint8_t axis, std::uint8_t data_bit)
+{
   // For simplicity, we encode axis in bit 0 and data_bit in bit 1
   std::uint32_t beam_word = 0;
   beam_word |= (axis & 1);
@@ -90,25 +99,31 @@ std::uint32_t makeBeamWord(std::uint8_t axis, std::uint8_t data_bit) {
   return beam_word;
 }
 
-std::vector<std::uint8_t> createSyncFrame() {
+std::vector<std::uint8_t> createSyncFrame()
+{
   return std::vector<std::uint8_t>(12, 0xFF);
 }
 
-std::vector<std::uint8_t> createSweepFrame(std::uint8_t sensor_id,
-                                           std::uint8_t base_station_id,
-                                           std::uint32_t timestamp,
-                                           std::uint32_t sync_offset,
-                                           bool valid_npoly) {
+std::vector<std::uint8_t> createSweepFrame(
+  std::uint8_t sensor_id,
+  std::uint8_t base_station_id,
+  std::uint32_t timestamp,
+  std::uint32_t sync_offset,
+  bool valid_npoly)
+{
   auto npoly = makeNpoly(base_station_id, valid_npoly, 0);
   auto beam_word = makeBeamWord(0, 0);
-  auto frame = createDataFrame(sensor_id, npoly, 100, sync_offset / 4, 0,
-                               beam_word, 0, timestamp);
+  auto frame = createDataFrame(
+    sensor_id, npoly, 100, sync_offset / 4, 0,
+    beam_word, 0, timestamp);
   return frame;
 }
 
 std::vector<std::uint8_t>
-createCompleteMeasurement(std::uint8_t base_station_id,
-                          std::uint32_t base_timestamp) {
+createCompleteMeasurement(
+  std::uint8_t base_station_id,
+  std::uint32_t base_timestamp)
+{
   std::vector<std::uint8_t> data;
 
   // In lighthouse protocol:
@@ -119,55 +134,57 @@ createCompleteMeasurement(std::uint8_t base_station_id,
   // First sweep (e.g., horizontal)
   // Sensor 0 is the reference with sync_offset
   auto sweep1_frame0 =
-      createSweepFrame(0, base_station_id, base_timestamp, 100000, true);
+    createSweepFrame(0, base_station_id, base_timestamp, 100000, true);
   data.insert(data.end(), sweep1_frame0.begin(), sweep1_frame0.end());
 
   // Sensors 1 and 2 have valid npoly, no sync_offset
   auto sweep1_frame1 =
-      createSweepFrame(1, base_station_id, base_timestamp + 10, 0, true);
+    createSweepFrame(1, base_station_id, base_timestamp + 10, 0, true);
   data.insert(data.end(), sweep1_frame1.begin(), sweep1_frame1.end());
 
   auto sweep1_frame2 =
-      createSweepFrame(2, base_station_id, base_timestamp + 20, 0, true);
+    createSweepFrame(2, base_station_id, base_timestamp + 20, 0, true);
   data.insert(data.end(), sweep1_frame2.begin(), sweep1_frame2.end());
 
   // Sensor 3 has invalid npoly, no sync_offset
   auto sweep1_frame3 =
-      createSweepFrame(3, base_station_id, base_timestamp + 30, 0, false);
+    createSweepFrame(3, base_station_id, base_timestamp + 30, 0, false);
   data.insert(data.end(), sweep1_frame3.begin(), sweep1_frame3.end());
 
   // Second sweep (e.g., vertical) - with larger offsets and later timestamp
   std::uint32_t timestamp2 = (base_timestamp + 5000) & kTimestampCounterMask;
 
   auto sweep2_frame0 =
-      createSweepFrame(0, base_station_id, timestamp2, 200000, true);
+    createSweepFrame(0, base_station_id, timestamp2, 200000, true);
   data.insert(data.end(), sweep2_frame0.begin(), sweep2_frame0.end());
 
   auto sweep2_frame1 =
-      createSweepFrame(1, base_station_id, timestamp2 + 10, 0, true);
+    createSweepFrame(1, base_station_id, timestamp2 + 10, 0, true);
   data.insert(data.end(), sweep2_frame1.begin(), sweep2_frame1.end());
 
   auto sweep2_frame2 =
-      createSweepFrame(2, base_station_id, timestamp2 + 20, 0, true);
+    createSweepFrame(2, base_station_id, timestamp2 + 20, 0, true);
   data.insert(data.end(), sweep2_frame2.begin(), sweep2_frame2.end());
 
   auto sweep2_frame3 =
-      createSweepFrame(3, base_station_id, timestamp2 + 30, 0, false);
+    createSweepFrame(3, base_station_id, timestamp2 + 30, 0, false);
   data.insert(data.end(), sweep2_frame3.begin(), sweep2_frame3.end());
 
   return data;
 }
 
 std::vector<std::uint8_t>
-createInterleavedMeasurements(const std::vector<std::uint8_t> &base_station_ids,
-                              std::uint32_t base_timestamp) {
+createInterleavedMeasurements(
+  const std::vector<std::uint8_t> & base_station_ids,
+  std::uint32_t base_timestamp)
+{
   std::vector<std::uint8_t> data;
 
   // Generate measurements for each basestation
   std::vector<std::vector<std::uint8_t>> all_measurements;
   for (auto bs_id : base_station_ids) {
     all_measurements.push_back(
-        createCompleteMeasurement(bs_id, base_timestamp + bs_id * 50000));
+      createCompleteMeasurement(bs_id, base_timestamp + bs_id * 50000));
   }
 
   // Interleave at the sweep level (4 sensors = 1 sweep)
@@ -175,15 +192,17 @@ createInterleavedMeasurements(const std::vector<std::uint8_t> &base_station_ids,
   // This simulates realistic data where basestations transmit in sequence
   // but we receive complete sweeps before switching to the next basestation
   const std::size_t frames_per_sweep = 4;       // 4 sensors per sweep
-  const std::size_t sweeps_per_measurement = 2; // 2 sweeps per measurement
+  const std::size_t sweeps_per_measurement = 2;  // 2 sweeps per measurement
 
   for (std::size_t sweep_idx = 0; sweep_idx < sweeps_per_measurement;
-       ++sweep_idx) {
-    for (auto &measurement : all_measurements) {
+    ++sweep_idx)
+  {
+    for (auto & measurement : all_measurements) {
       const std::size_t start = sweep_idx * frames_per_sweep * 12;
       const std::size_t end = start + frames_per_sweep * 12;
-      data.insert(data.end(), measurement.begin() + start,
-                  measurement.begin() + end);
+      data.insert(
+        data.end(), measurement.begin() + start,
+        measurement.begin() + end);
     }
   }
 
@@ -191,9 +210,11 @@ createInterleavedMeasurements(const std::vector<std::uint8_t> &base_station_ids,
 }
 
 SweepBlockRawData
-createSweepBlockRawData(std::uint8_t base_station_id, std::uint32_t timestamp,
-                        std::uint32_t offset0, std::uint32_t offset1,
-                        std::uint32_t offset2, std::uint32_t offset3) {
+createSweepBlockRawData(
+  std::uint8_t base_station_id, std::uint32_t timestamp,
+  std::uint32_t offset0, std::uint32_t offset1,
+  std::uint32_t offset2, std::uint32_t offset3)
+{
   SweepBlockRawData block;
   block.base_station_id = base_station_id;
   block.timestamp = timestamp;
@@ -204,5 +225,5 @@ createSweepBlockRawData(std::uint8_t base_station_id, std::uint32_t timestamp,
   return block;
 }
 
-} // namespace test_helpers
-} // namespace lighthouse_protocol_decoder
+}    // namespace test_helpers
+}    // namespace lighthouse_protocol_decoder

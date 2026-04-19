@@ -23,20 +23,23 @@
 #include "lighthouse_protocol_decoder/datatypes.hpp"
 #include "lighthouse_protocol_decoder/logger.hpp"
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 /// Processor for collecting and validating complete sweep data from all sensors
-class SweepProcessor {
+class SweepProcessor
+{
 public:
   /// Constructor
   /// @param callback Callback invoked when a complete sweep is validated
   /// @param logger Logger instance (optional)
-  explicit SweepProcessor(SweepCallback callback,
-                          LoggerInterface::Ptr logger = nullptr);
+  explicit SweepProcessor(
+    SweepCallback callback,
+    LoggerInterface::Ptr logger = nullptr);
 
   /// Process a data frame
   /// @param frame The data frame to process
-  void processFrame(const DataFrameContents &frame);
+  void processFrame(const DataFrameContents & frame);
 
   /// Reset the processor state
   void reset();
@@ -60,6 +63,6 @@ private:
   LoggerInterface::Ptr logger_;
 };
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-#endif // LIGHTHOUSE_PROTOCOL_DECODER__SWEEP_PROCESSOR_HPP_
+#endif  // LIGHTHOUSE_PROTOCOL_DECODER__SWEEP_PROCESSOR_HPP_

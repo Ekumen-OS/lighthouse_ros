@@ -13,28 +13,33 @@
 // limitations under the License.
 
 #include "lighthouse_protocol_decoder/ootx_frame_decoder.hpp"
-#include "lighthouse_protocol_decoder/crc32.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <sstream>
 
-namespace lighthouse_protocol_decoder {
+#include "lighthouse_protocol_decoder/crc32.hpp"
 
-namespace {
+namespace lighthouse_protocol_decoder
+{
+
+namespace
+{
 /// Convert a 16-bit value from line byte order (big-endian) to local byte order
 /// (little-endian)
 /// @param value The value in line byte order
 /// @return The value in local byte order
-std::uint16_t lineToLocalByteOrder(std::uint16_t value) {
+std::uint16_t lineToLocalByteOrder(std::uint16_t value)
+{
   return (value << 8) | (value >> 8);
 }
-} // namespace
+}    // namespace
 
 OOTXFrameDecoder::OOTXFrameDecoder(LoggerInterface::Ptr logger)
-    : has_decoded_frame_(false), logger_(std::move(logger)) {}
+: has_decoded_frame_(false), logger_(std::move(logger)) {}
 
-void OOTXFrameDecoder::processSlowBit(bool slow_bit) {
+void OOTXFrameDecoder::processSlowBit(bool slow_bit)
+{
   bit_buffer_.push_back(slow_bit);
 
   while (!bit_buffer_.empty()) {
@@ -52,7 +57,7 @@ void OOTXFrameDecoder::processSlowBit(bool slow_bit) {
         bit_buffer_.pop_front();
       }
       if (!bit_buffer_.empty()) {
-        bit_buffer_.pop_front(); // Remove the first 0 we found
+        bit_buffer_.pop_front();  // Remove the first 0 we found
       }
     } else if (result == DecodeResult::Decoded) {
       // Successfully decoded, clear the buffer
@@ -61,7 +66,8 @@ void OOTXFrameDecoder::processSlowBit(bool slow_bit) {
   }
 }
 
-DecodeResult OOTXFrameDecoder::tryDecodeFrame() {
+DecodeResult OOTXFrameDecoder::tryDecodeFrame()
+{
   // Buffer payload_length must be a multiple of 17
   if (bit_buffer_.size() % 17 != 0) {
     return DecodeResult::Incomplete;
@@ -98,7 +104,7 @@ DecodeResult OOTXFrameDecoder::tryDecodeFrame() {
   // Calculate expected word count:
   // preamble(1) + payload_length(1) + data + crc32(2)
   const auto data_words =
-      (payload_length + 1) / 2; // round the payload len up to nearest word
+    (payload_length + 1) / 2;   // round the payload len up to nearest word
   const std::size_t expected_words = 2 + data_words + 2;
 
   if (words_count == 2 && logger_) {
@@ -141,15 +147,15 @@ DecodeResult OOTXFrameDecoder::tryDecodeFrame() {
   const std::size_t crc_upper_offset = (expected_words - 1) * 17;
 
   const std::uint16_t crc_lower_be =
-      loadUint16MSBFirst(bit_buffer_, crc_lower_offset, 16);
+    loadUint16MSBFirst(bit_buffer_, crc_lower_offset, 16);
   const std::uint16_t crc_upper_be =
-      loadUint16MSBFirst(bit_buffer_, crc_upper_offset, 16);
+    loadUint16MSBFirst(bit_buffer_, crc_upper_offset, 16);
 
   const std::uint16_t crc_lower = lineToLocalByteOrder(crc_lower_be);
   const std::uint16_t crc_upper = lineToLocalByteOrder(crc_upper_be);
 
   const std::uint32_t transmitted_crc =
-      (static_cast<std::uint32_t>(crc_upper) << 16) | crc_lower;
+    (static_cast<std::uint32_t>(crc_upper) << 16) | crc_lower;
   const std::uint32_t calculated_crc = calculateCRC32(payload);
 
   if (calculated_crc != transmitted_crc) {
@@ -170,9 +176,11 @@ DecodeResult OOTXFrameDecoder::tryDecodeFrame() {
   return DecodeResult::Decoded;
 }
 
-std::uint16_t OOTXFrameDecoder::loadUint16MSBFirst(const std::deque<bool> &bits,
-                                                   std::size_t offset,
-                                                   std::size_t count) {
+std::uint16_t OOTXFrameDecoder::loadUint16MSBFirst(
+  const std::deque<bool> & bits,
+  std::size_t offset,
+  std::size_t count)
+{
   std::uint16_t value = 0;
   for (auto i = 0u; i < count; ++i) {
     if (bits[offset + count - 1 - i]) {
@@ -182,10 +190,11 @@ std::uint16_t OOTXFrameDecoder::loadUint16MSBFirst(const std::deque<bool> &bits,
   return value;
 }
 
-void OOTXFrameDecoder::reset() {
+void OOTXFrameDecoder::reset()
+{
   bit_buffer_.clear();
   latest_payload_.clear();
   has_decoded_frame_ = false;
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

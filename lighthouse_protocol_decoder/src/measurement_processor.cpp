@@ -16,14 +16,17 @@
 
 #include <cmath>
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
-MeasurementProcessor::MeasurementProcessor(BearingCallback callback,
-                                           LoggerInterface::Ptr logger)
-    : callback_(std::move(callback)), logger_(std::move(logger)) {}
+MeasurementProcessor::MeasurementProcessor(
+  BearingCallback callback,
+  LoggerInterface::Ptr logger)
+: callback_(std::move(callback)), logger_(std::move(logger)) {}
 
 void MeasurementProcessor::processBlock(
-    const SweepBlockRawData &sweep_contents) {
+  const SweepBlockRawData & sweep_contents)
+{
   const auto base_station_id = sweep_contents.base_station_id;
 
   // Initialize buffer for this base station if needed
@@ -44,8 +47,8 @@ void MeasurementProcessor::processBlock(
     return;
   }
 
-  const auto &current = per_channel_buffer_[base_station_id].back();
-  const auto &previous = per_channel_buffer_[base_station_id].front();
+  const auto & current = per_channel_buffer_[base_station_id].back();
+  const auto & previous = per_channel_buffer_[base_station_id].front();
 
   // Check if they form a valid matched pair
   if (!blocksAreMatchedPair(current, previous)) {
@@ -54,26 +57,28 @@ void MeasurementProcessor::processBlock(
 
   // Extract and report measurements
   const auto sensor_bearings =
-      extractMeasurements(current, previous, base_station_id);
+    extractMeasurements(current, previous, base_station_id);
 
   if (callback_) {
     callback_(sensor_bearings);
   }
 }
 
-void MeasurementProcessor::reset() { per_channel_buffer_.clear(); }
+void MeasurementProcessor::reset() {per_channel_buffer_.clear();}
 
 bool MeasurementProcessor::blocksAreMatchedPair(
-    const SweepBlockRawData &current, const SweepBlockRawData &previous) const {
+  const SweepBlockRawData & current, const SweepBlockRawData & previous) const
+{
   // The current block's offset must be greater than the previous
   if (previous.sensors[0].normalized_offset >
-      current.sensors[0].normalized_offset) {
+    current.sensors[0].normalized_offset)
+  {
     return false;
   }
 
   // The time difference between blocks should be less than ~180 degrees
   const auto block_delta_timestamp =
-      timestampDiff(current.timestamp, previous.timestamp);
+    timestampDiff(current.timestamp, previous.timestamp);
 
   if (block_delta_timestamp > kMaxTimestampDiffForBlockMatch) {
     return false;
@@ -83,9 +88,11 @@ bool MeasurementProcessor::blocksAreMatchedPair(
 }
 
 SweepBlockBearings
-MeasurementProcessor::extractMeasurements(const SweepBlockRawData &current,
-                                          const SweepBlockRawData &previous,
-                                          std::uint8_t base_station_id) const {
+MeasurementProcessor::extractMeasurements(
+  const SweepBlockRawData & current,
+  const SweepBlockRawData & previous,
+  std::uint8_t base_station_id) const
+{
   SweepBlockBearings sensor_bearings;
   sensor_bearings.base_station_id = base_station_id;
   sensor_bearings.hardware_timestamp = current.timestamp;
@@ -104,7 +111,7 @@ MeasurementProcessor::extractMeasurements(const SweepBlockRawData &current,
 
     // Calculate polar bearings
     const auto [azimuth_rad, elevation_rad] =
-        calculatePolarBearing(phase_beam_0, phase_beam_1);
+      calculatePolarBearing(phase_beam_0, phase_beam_1);
 
     // Convert to degrees
     const auto azimuth_deg = azimuth_rad * 180.0 / M_PI;
@@ -118,19 +125,21 @@ MeasurementProcessor::extractMeasurements(const SweepBlockRawData &current,
 }
 
 std::pair<double, double>
-MeasurementProcessor::calculatePolarBearing(double phase_beam_0,
-                                            double phase_beam_1) const {
+MeasurementProcessor::calculatePolarBearing(
+  double phase_beam_0,
+  double phase_beam_1) const
+{
   // Calculate azimuth
   const auto azimuth = ((phase_beam_0 + phase_beam_1) / 2.0) - M_PI;
 
   // Calculate elevation
-  const auto p = M_PI / 3.0; // 60 degrees in radians
+  const auto p = M_PI / 3.0;  // 60 degrees in radians
   const auto beta =
-      (phase_beam_1 - phase_beam_0) - (2.0 * M_PI / 3.0); // 120 degrees
+    (phase_beam_1 - phase_beam_0) - (2.0 * M_PI / 3.0);   // 120 degrees
 
   const auto elevation = std::atan(std::sin(beta / 2.0) / std::tan(p / 2.0));
 
   return {azimuth, elevation};
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

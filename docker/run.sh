@@ -18,7 +18,7 @@
 # Use `--build` to build the image before starting the container.
 
 set -o errexit
-cd $(dirname "$(readlink -f "$0")")
+cd "$(dirname "$(readlink -f "$0")")"
 
 [[ ! -z "${WITHIN_DEV}" ]] && echo "Already in the development environment!" && exit 1
 HELP="Usage: $(basename $0) [-b|--build] [-- <command>]"
