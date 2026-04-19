@@ -24,12 +24,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(Ceres REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Sophus REQUIRED)
 
 # Library
 add_library(${PROJECT_NAME} SHARED
+  src/ceres_helpers.cpp
+  src/deck_pose_optimization.cpp
   src/station_pose_pnp_solver.cpp
+  src/station_geometry_initialization.cpp
+  src/station_geometry_optimization.cpp
+  src/utils.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -40,6 +46,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
+  Ceres::ceres
   ${OpenCV_LIBS}
   Sophus::Sophus
 )
@@ -59,10 +66,30 @@ install(DIRECTORY include/
 )
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-ament_export_dependencies(OpenCV Sophus)
+ament_export_dependencies(Ceres OpenCV Sophus)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+
+  # Test helpers library
+  add_library(test_helpers
+    test/test_helpers.cpp
+  )
+
+  target_include_directories(test_helpers
+    PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      ${OpenCV_INCLUDE_DIRS}
+  )
+
+  target_link_libraries(test_helpers
+    ${PROJECT_NAME}
+  )
+
+  target_compile_features(test_helpers PUBLIC cxx_std_17)
 
   ament_add_gtest(test_station_pose_pnp_solver
     test/test_station_pose_pnp_solver.cpp
@@ -71,6 +98,51 @@ if(BUILD_TESTING)
   if(TARGET test_station_pose_pnp_solver)
     target_link_libraries(test_station_pose_pnp_solver
       ${PROJECT_NAME}
+      test_helpers
+    )
+  endif()
+
+  ament_add_gtest(test_station_geometry_optimization
+    test/test_station_geometry_optimization.cpp
+  )
+
+  if(TARGET test_station_geometry_optimization)
+    target_link_libraries(test_station_geometry_optimization
+      ${PROJECT_NAME}
+      test_helpers
+    )
+  endif()
+
+  ament_add_gtest(test_deck_pose_optimization
+    test/test_deck_pose_optimization.cpp
+  )
+
+  if(TARGET test_deck_pose_optimization)
+    target_link_libraries(test_deck_pose_optimization
+      ${PROJECT_NAME}
+      test_helpers
+    )
+  endif()
+
+  ament_add_gtest(test_station_geometry_initialization
+    test/test_station_geometry_initialization.cpp
+  )
+
+  if(TARGET test_station_geometry_initialization)
+    target_link_libraries(test_station_geometry_initialization
+      ${PROJECT_NAME}
+      test_helpers
+    )
+  endif()
+
+  ament_add_gtest(test_real_world_measurements
+    test/test_real_world_measurements.cpp
+  )
+
+  if(TARGET test_real_world_measurements)
+    target_link_libraries(test_real_world_measurements
+      ${PROJECT_NAME}
+      test_helpers
     )
   endif()
 endif()
