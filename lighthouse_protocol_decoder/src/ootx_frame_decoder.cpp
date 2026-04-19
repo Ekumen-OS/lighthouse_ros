@@ -62,6 +62,11 @@ void OOTXFrameDecoder::processSlowBit(bool slow_bit)
     } else if (result == DecodeResult::Decoded) {
       // Successfully decoded, clear the buffer
       bit_buffer_.clear();
+    } else if (result == DecodeResult::CrcError) {
+      // Frame structure was valid but CRC failed; discard the entire
+      // buffer so the decoder can restart cleanly instead of slowly
+      // draining corrupted bits one-by-one.
+      bit_buffer_.clear();
     }
   }
 }
@@ -162,7 +167,7 @@ DecodeResult OOTXFrameDecoder::tryDecodeFrame()
     if (logger_) {
       logger_->warning("CRC32 mismatch while trying to decode OOTX frame");
     }
-    return DecodeResult::NotAFrame;
+    return DecodeResult::CrcError;
   }
 
   // Successfully decoded!

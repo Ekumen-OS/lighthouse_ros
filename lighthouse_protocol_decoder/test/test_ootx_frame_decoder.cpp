@@ -181,6 +181,48 @@ TEST_F(OOTXFrameDecoderTest, CRCMismatchRejected) {
   EXPECT_FALSE(decoder_->hasDecodedFrame());
 }
 
+TEST_F(OOTXFrameDecoderTest, ValidFrameDecodedAfterCRCMismatch) {
+  // Verify that after a CRC failure the decoder recovers and can decode
+  // a subsequent valid frame without getting stuck draining corrupted bits.
+
+  auto add_word = [this](std::uint16_t word) {
+      for (int i = 15; i >= 0; --i) {
+        decoder_->processSlowBit((word >> i) & 1);
+      }
+      decoder_->processSlowBit(true);
+    };
+
+  auto add_word_le = [this](std::uint16_t word) {
+      std::uint16_t swapped = ((word & 0xFF) << 8) | ((word >> 8) & 0xFF);
+      for (int i = 15; i >= 0; --i) {
+        decoder_->processSlowBit((swapped >> i) & 1);
+      }
+      decoder_->processSlowBit(true);
+    };
+
+  // First frame: structurally valid but with a bad CRC
+  add_word(0x0000);     // Preamble
+  add_word_le(0x0002);  // Length = 2
+  add_word(0xCDAB);     // Data
+  add_word_le(0x1234);  // Wrong CRC lower
+  add_word_le(0x5678);  // Wrong CRC upper
+
+  EXPECT_FALSE(decoder_->hasDecodedFrame());
+
+  // Second frame: fully valid — must be decoded successfully
+  std::vector<std::uint8_t> payload = {0xAB, 0xCD};
+  const std::uint32_t expected_crc = calculateCRC32(payload);
+
+  add_word(0x0000);                             // Preamble
+  add_word_le(0x0002);                          // Length = 2
+  add_word(0xCDAB);                             // Data
+  add_word_le(expected_crc & 0xFFFF);           // CRC lower
+  add_word_le((expected_crc >> 16) & 0xFFFF);   // CRC upper
+
+  EXPECT_TRUE(decoder_->hasDecodedFrame());
+  EXPECT_EQ(decoder_->getLastPayload(), payload);
+}
+
 }    // namespace lighthouse_protocol_decoder
 
 int main(int argc, char ** argv)

@@ -39,7 +39,10 @@ enum class DecodeResult
   /// Frame successfully decoded
   Decoded,
   /// Not enough bits to determine if frame is valid, need more data
-  Incomplete
+  Incomplete,
+  /// Frame structure was valid but CRC check failed; all bits consumed
+  /// by the frame should be discarded
+  CrcError
 };
 
 /// Decoder for the OOTX (Omnidirectional Optical Transmitter) protocol
