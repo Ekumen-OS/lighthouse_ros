@@ -15,7 +15,6 @@
 #ifndef LIGHTHOUSE_DECK_UTILS__SERIAL_PORT_HPP_
 #define LIGHTHOUSE_DECK_UTILS__SERIAL_PORT_HPP_
 
-#include <asio.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -24,11 +23,16 @@
 #include <string>
 #include <thread>
 
-namespace lighthouse_deck_utils {
+#include <asio.hpp>
 
-class SerialPort {
+namespace lighthouse_deck_utils
+{
+
+class SerialPort
+{
 public:
-  enum class BaudRate {
+  enum class BaudRate
+  {
     BAUD_9600 = 9600,
     BAUD_19200 = 19200,
     BAUD_38400 = 38400,
@@ -47,7 +51,8 @@ public:
 
   enum class FlowControl { NONE, SOFTWARE, HARDWARE };
 
-  struct PortConfiguration {
+  struct PortConfiguration
+  {
     BaudRate baud_rate{BaudRate::BAUD_115200};
     DataBits data_bits{DataBits::EIGHT};
     StopBits stop_bits{StopBits::ONE};
@@ -55,29 +60,29 @@ public:
     FlowControl flow_control{FlowControl::NONE};
   };
 
-  using ReceiveCallback = std::function<void(const uint8_t *, std::size_t)>;
+  using ReceiveCallback = std::function<void (const uint8_t *, std::size_t)>;
 
   SerialPort();
   ~SerialPort();
 
   SerialPort(const SerialPort &) = delete;
-  SerialPort &operator=(const SerialPort &) = delete;
+  SerialPort & operator=(const SerialPort &) = delete;
   SerialPort(SerialPort &&) = delete;
-  SerialPort &operator=(SerialPort &&) = delete;
+  SerialPort & operator=(SerialPort &&) = delete;
 
-  bool open(const std::string &port_path, const PortConfiguration &config);
+  bool open(const std::string & port_path, const PortConfiguration & config);
   void close();
   bool isOpen() const;
 
-  bool setConfiguration(const PortConfiguration &config);
+  bool setConfiguration(const PortConfiguration & config);
 
-  bool send(const uint8_t *data, std::size_t size);
+  bool send(const uint8_t * data, std::size_t size);
   void sendBreak();
   void setCallback(ReceiveCallback callback);
 
 private:
   void startAsyncRead();
-  void applyConfiguration(const PortConfiguration &config);
+  void applyConfiguration(const PortConfiguration & config);
   bool internalIsOpen() const;
 
   asio::io_context io_context_;
@@ -87,10 +92,10 @@ private:
   ReceiveCallback receive_callback_;
   mutable std::mutex mutex_;
 
-  static constexpr std::size_t READ_BUFFER_SIZE = 1024;
+  static constexpr std::size_t READ_BUFFER_SIZE = 1024;  //
   std::array<uint8_t, READ_BUFFER_SIZE> read_buffer_;
 };
 
-} // namespace lighthouse_deck_utils
+}  // namespace lighthouse_deck_utils
 
-#endif // LIGHTHOUSE_DECK_UTILS__SERIAL_PORT_HPP_
+#endif  // LIGHTHOUSE_DECK_UTILS__SERIAL_PORT_HPP_

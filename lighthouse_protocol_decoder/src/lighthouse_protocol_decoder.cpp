@@ -17,34 +17,36 @@
 #include <iomanip>
 #include <sstream>
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 LighthouseProtocolDecoder::LighthouseProtocolDecoder(
-    BearingCallback app_bearing_callback, LoggerInterface::Ptr logger)
-    : current_mode_(Mode::SYNC),
-      app_bearing_callback_(std::move(app_bearing_callback)),
-      logger_(std::move(logger)) {
-
+  BearingCallback app_bearing_callback, LoggerInterface::Ptr logger)
+: current_mode_(Mode::SYNC),
+  app_bearing_callback_(std::move(app_bearing_callback)),
+  logger_(std::move(logger))
+{
   // Initialize in SYNC mode
   sync_frame_decoder_ = std::make_unique<SyncFrameDecoder>(
-      [this]() { syncFrameDetectedCallback(); }, logger_);
+    [this]() {syncFrameDetectedCallback();}, logger_);
 
   // Create the sweep and measurement processors
   sweep_processor_ = std::make_unique<SweepProcessor>(
-      [this](const SweepBlockRawData &sweep) { sweepCallback(sweep); },
-      logger_);
+    [this](const SweepBlockRawData & sweep) {sweepCallback(sweep);},
+    logger_);
 
   measurement_processor_ = std::make_unique<MeasurementProcessor>(
-      [this](const SweepBlockBearings &bearings) {
-        measurementCallback(bearings);
-      },
-      logger_);
+    [this](const SweepBlockBearings & bearings) {
+      measurementCallback(bearings);
+    },
+    logger_);
 
   // Initialize timestamp tracking
   prev_timestamp0_.fill(0);
 }
 
-void LighthouseProtocolDecoder::processByte(std::uint8_t byte) {
+void LighthouseProtocolDecoder::processByte(std::uint8_t byte)
+{
   try {
     if (current_mode_ == Mode::SYNC) {
       if (sync_frame_decoder_) {
@@ -55,27 +57,31 @@ void LighthouseProtocolDecoder::processByte(std::uint8_t byte) {
         data_frame_decoder_->processByte(byte);
       }
     }
-  } catch (const std::exception &e) {
+  } catch (const std::exception & e) {
     if (logger_) {
       logger_->error(std::string("Exception caught: ") + e.what());
     }
   }
 }
 
-void LighthouseProtocolDecoder::reset() {
+void LighthouseProtocolDecoder::reset()
+{
   current_mode_ = Mode::SYNC;
   sync_frame_decoder_ = std::make_unique<SyncFrameDecoder>(
-      [this]() { syncFrameDetectedCallback(); }, logger_);
+    [this]() {syncFrameDetectedCallback();}, logger_);
   data_frame_decoder_.reset();
   sweep_processor_->reset();
   measurement_processor_->reset();
-  std::for_each(ootx_decoders_.begin(), ootx_decoders_.end(),
-                [](auto &decoder) { decoder.reset(); });
-  std::for_each(prev_timestamp0_.begin(), prev_timestamp0_.end(),
-                [](auto &ts) { ts = 0; });
+  std::for_each(
+    ootx_decoders_.begin(), ootx_decoders_.end(),
+    [](auto & decoder) {decoder.reset();});
+  std::for_each(
+    prev_timestamp0_.begin(), prev_timestamp0_.end(),
+    [](auto & ts) {ts = 0;});
 }
 
-void LighthouseProtocolDecoder::syncFrameDetectedCallback() {
+void LighthouseProtocolDecoder::syncFrameDetectedCallback()
+{
   if (logger_) {
     logger_->info("Sync frame detected, switching into tracking mode...");
   }
@@ -86,15 +92,15 @@ void LighthouseProtocolDecoder::syncFrameDetectedCallback() {
 
   // Create data frame decoder
   data_frame_decoder_ = std::make_unique<DataFrameDecoder>(
-      [this](bool good_sync, const DataFrameContents &frame) {
-        dataframeCallback(good_sync, frame);
-      },
-      logger_);
+    [this](bool good_sync, const DataFrameContents & frame) {
+      dataframeCallback(good_sync, frame);
+    },
+    logger_);
 }
 
 void LighthouseProtocolDecoder::dataframeCallback(
-    bool good_sync, const DataFrameContents &frame_data) {
-
+  bool good_sync, const DataFrameContents & frame_data)
+{
   if (logger_) {
     std::ostringstream oss;
     oss << "Sensor: " << static_cast<int>(frame_data.sid) << "  TS:" << std::hex
@@ -102,8 +108,8 @@ void LighthouseProtocolDecoder::dataframeCallback(
         << "  Width:" << std::setw(4) << frame_data.width << std::dec
         << "  Chan:" << std::setw(4)
         << static_cast<int>(frame_data.baseStationId()) << "("
-        << (frame_data.validNpoly() ? std::to_string(frame_data.slowBit())
-                                    : "-")
+        << (frame_data.validNpoly() ? std::to_string(frame_data.slowBit()) :
+    "-")
         << ")"
         << "  offset:" << std::setw(6) << std::left << frame_data.sync_offset
         << std::right << "  BeamWord:" << std::hex << std::setw(5)
@@ -119,7 +125,7 @@ void LighthouseProtocolDecoder::dataframeCallback(
     // Switch back to SYNC mode
     current_mode_ = Mode::SYNC;
     sync_frame_decoder_ = std::make_unique<SyncFrameDecoder>(
-        [this]() { syncFrameDetectedCallback(); }, logger_);
+      [this]() {syncFrameDetectedCallback();}, logger_);
     data_frame_decoder_.reset();
   } else {
     // Process the frame through the sweep processor
@@ -127,19 +133,20 @@ void LighthouseProtocolDecoder::dataframeCallback(
 
     // Handle OOTX slow bit processing
     if (frame_data.validNpoly() &&
-        frame_data.baseStationId() < kDeckLighthouseMaxNBs &&
-        frame_data.sync_offset != 0) {
-
+      frame_data.baseStationId() < kDeckLighthouseMaxNBs &&
+      frame_data.sync_offset != 0)
+    {
       const std::uint32_t timestamp0 =
-          timestampDiff(frame_data.timestamp, frame_data.sync_offset);
+        timestampDiff(frame_data.timestamp, frame_data.sync_offset);
 
       const std::uint8_t bs_id = frame_data.baseStationId();
 
       // Create OOTX decoder for this base station if needed
       if (!ootx_decoders_[bs_id]) {
         if (logger_) {
-          logger_->info("Creating new OOTX decoder for basestation " +
-                        std::to_string(bs_id));
+          logger_->info(
+            "Creating new OOTX decoder for basestation " +
+            std::to_string(bs_id));
         }
         ootx_decoders_[bs_id] = std::make_unique<OOTXFrameDecoder>(logger_);
         prev_timestamp0_[bs_id] = timestamp0;
@@ -147,8 +154,10 @@ void LighthouseProtocolDecoder::dataframeCallback(
 
       // Filter slow bits based on timing
       const std::uint32_t prev_timestamp0 = prev_timestamp0_[bs_id];
-      if (timestampAbsDiffLargerThan(timestamp0, prev_timestamp0,
-                                     kMinTicksBetweenSlowBits)) {
+      if (timestampAbsDiffLargerThan(
+          timestamp0, prev_timestamp0,
+          kMinTicksBetweenSlowBits))
+      {
         ootx_decoders_[bs_id]->processSlowBit(frame_data.slowBit());
       }
 
@@ -158,19 +167,22 @@ void LighthouseProtocolDecoder::dataframeCallback(
 }
 
 void LighthouseProtocolDecoder::sweepCallback(
-    const SweepBlockRawData &sweep_contents) {
+  const SweepBlockRawData & sweep_contents)
+{
   // Forward to measurement processor
   measurement_processor_->processBlock(sweep_contents);
 }
 
 void LighthouseProtocolDecoder::measurementCallback(
-    const SweepBlockBearings &sensor_bearings) {
-
+  const SweepBlockBearings & sensor_bearings)
+{
   if (logger_) {
-    logger_->debug("Channel: " +
-                   std::to_string(sensor_bearings.base_station_id));
-    logger_->debug("HW Timestamp: " +
-                   std::to_string(sensor_bearings.hardware_timestamp));
+    logger_->debug(
+      "Channel: " +
+      std::to_string(sensor_bearings.base_station_id));
+    logger_->debug(
+      "HW Timestamp: " +
+      std::to_string(sensor_bearings.hardware_timestamp));
 
     for (std::size_t i = 0; i < kPulseProcessorNSensors; ++i) {
       std::ostringstream oss;
@@ -187,4 +199,4 @@ void LighthouseProtocolDecoder::measurementCallback(
   }
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

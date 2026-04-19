@@ -14,35 +14,41 @@
 
 #include <gtest/gtest.h>
 
-#include "lighthouse_protocol_decoder/measurement_processor.hpp"
-#include "test_helpers.hpp"
-
 #include <cmath>
 #include <vector>
 
-namespace lighthouse_protocol_decoder {
+#include "lighthouse_protocol_decoder/measurement_processor.hpp"
+#include "test_helpers.hpp"
+
+namespace lighthouse_protocol_decoder
+{
 
 using test_helpers::createSweepBlockRawData;
 
 // Alias for backward compatibility with existing test code
 inline SweepBlockRawData
-createTestSweepBlock(std::uint8_t base_station_id, std::uint32_t timestamp,
-                     std::uint32_t offset0, std::uint32_t offset1,
-                     std::uint32_t offset2, std::uint32_t offset3) {
-  return createSweepBlockRawData(base_station_id, timestamp, offset0, offset1,
-                                 offset2, offset3);
+createTestSweepBlock(
+  std::uint8_t base_station_id, std::uint32_t timestamp,
+  std::uint32_t offset0, std::uint32_t offset1,
+  std::uint32_t offset2, std::uint32_t offset3)
+{
+  return createSweepBlockRawData(
+    base_station_id, timestamp, offset0, offset1,
+    offset2, offset3);
 }
 
-class MeasurementProcessorTest : public ::testing::Test {
+class MeasurementProcessorTest : public ::testing::Test
+{
 protected:
-  void SetUp() override {
+  void SetUp() override
+  {
     bearings_.clear();
 
     processor_ = std::make_unique<MeasurementProcessor>(
-        [this](const SweepBlockBearings &bearings) {
-          bearings_.push_back(bearings);
-        },
-        nullptr);
+      [this](const SweepBlockBearings & bearings) {
+        bearings_.push_back(bearings);
+      },
+      nullptr);
   }
 
   std::unique_ptr<MeasurementProcessor> processor_;
@@ -52,14 +58,14 @@ protected:
 TEST_F(MeasurementProcessorTest, ConstructorWorksWithoutLogger) {
   std::vector<SweepBlockBearings> bearings;
   auto processor_no_logger = std::make_unique<MeasurementProcessor>(
-      [&bearings](const SweepBlockBearings &b) { bearings.push_back(b); });
+    [&bearings](const SweepBlockBearings & b) {bearings.push_back(b);});
   ASSERT_EQ(bearings.size(), 0);
 }
 
 TEST_F(MeasurementProcessorTest, NoCallbackWithSingleBlock) {
   // Send only one block - should not trigger callback (need 2 blocks)
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
 
   ASSERT_EQ(bearings_.size(), 0);
 }
@@ -67,9 +73,9 @@ TEST_F(MeasurementProcessorTest, NoCallbackWithSingleBlock) {
 TEST_F(MeasurementProcessorTest, CallbackWithTwoMatchingBlocks) {
   // Send two blocks from the same base station that form a matched pair
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
+    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
 
   ASSERT_EQ(bearings_.size(), 1);
   EXPECT_EQ(bearings_[0].base_station_id, 1);
@@ -79,9 +85,9 @@ TEST_F(MeasurementProcessorTest, CallbackWithTwoMatchingBlocks) {
 TEST_F(MeasurementProcessorTest, NoCallbackWhenOffsetDecreases) {
   // Second block has lower offset than first - should not match
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 100000, 100100, 100200, 100300));
+    createTestSweepBlock(1, 1000, 100000, 100100, 100200, 100300));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(1, 2000, 50000, 50100, 50200, 50300));
 
   ASSERT_EQ(bearings_.size(), 0);
 }
@@ -89,9 +95,9 @@ TEST_F(MeasurementProcessorTest, NoCallbackWhenOffsetDecreases) {
 TEST_F(MeasurementProcessorTest, NoCallbackWhenTimestampDiffTooLarge) {
   // Timestamp difference exceeds kMaxTimestampDiffForBlockMatch
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
   processor_->processBlock(
-      createTestSweepBlock(1, 300000, 100000, 100100, 100200, 100300));
+    createTestSweepBlock(1, 300000, 100000, 100100, 100200, 100300));
 
   ASSERT_EQ(bearings_.size(), 0);
 }
@@ -99,11 +105,11 @@ TEST_F(MeasurementProcessorTest, NoCallbackWhenTimestampDiffTooLarge) {
 TEST_F(MeasurementProcessorTest, BufferKeepsOnlyLastTwoBlocks) {
   // Send 3 blocks - buffer should only keep last 2
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
+    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
   processor_->processBlock(
-      createTestSweepBlock(1, 3000, 150000, 150100, 150200, 150300));
+    createTestSweepBlock(1, 3000, 150000, 150100, 150200, 150300));
 
   // Should have 2 callbacks: (1,2) and (2,3)
   ASSERT_EQ(bearings_.size(), 2);
@@ -112,13 +118,13 @@ TEST_F(MeasurementProcessorTest, BufferKeepsOnlyLastTwoBlocks) {
 TEST_F(MeasurementProcessorTest, DifferentBaseStationsProcessedSeparately) {
   // Send blocks from two different base stations
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
   processor_->processBlock(
-      createTestSweepBlock(2, 1100, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(2, 1100, 50000, 50100, 50200, 50300));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
+    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
   processor_->processBlock(
-      createTestSweepBlock(2, 2100, 100000, 100100, 100200, 100300));
+    createTestSweepBlock(2, 2100, 100000, 100100, 100200, 100300));
 
   // Should have 2 callbacks, one for each base station
   ASSERT_EQ(bearings_.size(), 2);
@@ -129,14 +135,14 @@ TEST_F(MeasurementProcessorTest, DifferentBaseStationsProcessedSeparately) {
 TEST_F(MeasurementProcessorTest, ResetClearsState) {
   // Send one block
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
 
   // Reset
   processor_->reset();
 
   // Send one block - should not trigger callback
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
+    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
 
   ASSERT_EQ(bearings_.size(), 0);
 }
@@ -147,45 +153,50 @@ TEST_F(MeasurementProcessorTest, BearingCalculationBasicValues) {
   const std::uint32_t offset_first = 100000;
   const std::uint32_t offset_second = 200000;
 
-  processor_->processBlock(createTestSweepBlock(
+  processor_->processBlock(
+    createTestSweepBlock(
       1, 1000, offset_first, offset_first, offset_first, offset_first));
-  processor_->processBlock(createTestSweepBlock(
+  processor_->processBlock(
+    createTestSweepBlock(
       1, 2000, offset_second, offset_second, offset_second, offset_second));
 
   ASSERT_EQ(bearings_.size(), 1);
 
   // Verify all sensors have the same angles since they have the same offsets
   for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
-    EXPECT_NEAR(bearings_[0].sensor_angles[i].azimuth,
-                bearings_[0].sensor_angles[0].azimuth, 0.001);
-    EXPECT_NEAR(bearings_[0].sensor_angles[i].elevation,
-                bearings_[0].sensor_angles[0].elevation, 0.001);
+    EXPECT_NEAR(
+      bearings_[0].sensor_angles[i].azimuth,
+      bearings_[0].sensor_angles[0].azimuth, 0.001);
+    EXPECT_NEAR(
+      bearings_[0].sensor_angles[i].elevation,
+      bearings_[0].sensor_angles[0].elevation, 0.001);
   }
 }
 
 TEST_F(MeasurementProcessorTest, BearingCalculationDifferentSensors) {
   // Test with different offset values for each sensor
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 60000, 70000, 80000));
+    createTestSweepBlock(1, 1000, 50000, 60000, 70000, 80000));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 110000, 120000, 130000));
+    createTestSweepBlock(1, 2000, 100000, 110000, 120000, 130000));
 
   ASSERT_EQ(bearings_.size(), 1);
 
   // Each sensor should have different angles
   for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
     // Azimuth should be different
-    EXPECT_NE(bearings_[0].sensor_angles[i].azimuth,
-              bearings_[0].sensor_angles[0].azimuth);
+    EXPECT_NE(
+      bearings_[0].sensor_angles[i].azimuth,
+      bearings_[0].sensor_angles[0].azimuth);
   }
 }
 
 TEST_F(MeasurementProcessorTest, BearingValuesInReasonableRange) {
   // Verify that calculated bearings are within reasonable ranges
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 60000, 70000, 80000));
+    createTestSweepBlock(1, 1000, 50000, 60000, 70000, 80000));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 110000, 120000, 130000));
+    createTestSweepBlock(1, 2000, 100000, 110000, 120000, 130000));
 
   ASSERT_EQ(bearings_.size(), 1);
 
@@ -204,7 +215,8 @@ TEST_F(MeasurementProcessorTest, BearingValuesInReasonableRange) {
 TEST_F(MeasurementProcessorTest, MultipleConsecutiveMeasurements) {
   // Send multiple sweep pairs in sequence
   for (int i = 0; i < 5; ++i) {
-    processor_->processBlock(createTestSweepBlock(
+    processor_->processBlock(
+      createTestSweepBlock(
         1, 1000 + i * 1000, 50000 + i * 10000, 50100 + i * 10000,
         50200 + i * 10000, 50300 + i * 10000));
   }
@@ -213,7 +225,7 @@ TEST_F(MeasurementProcessorTest, MultipleConsecutiveMeasurements) {
   ASSERT_EQ(bearings_.size(), 4);
 
   // All should be from base station 1
-  for (const auto &bearing : bearings_) {
+  for (const auto & bearing : bearings_) {
     EXPECT_EQ(bearing.base_station_id, 1);
   }
 }
@@ -221,9 +233,9 @@ TEST_F(MeasurementProcessorTest, MultipleConsecutiveMeasurements) {
 TEST_F(MeasurementProcessorTest, TimestampAssignment) {
   // Verify that hardware_timestamp is set to the current block's timestamp
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
+    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
+    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
 
   ASSERT_EQ(bearings_.size(), 1);
   EXPECT_EQ(bearings_[0].hardware_timestamp, 2000);
@@ -235,9 +247,9 @@ TEST_F(MeasurementProcessorTest, BaseStationPeriodUsedCorrectly) {
 
   // Base station 1
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 50000, 50000, 50000, 50000));
+    createTestSweepBlock(1, 1000, 50000, 50000, 50000, 50000));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 100000, 100000, 100000));
+    createTestSweepBlock(1, 2000, 100000, 100000, 100000, 100000));
 
   ASSERT_EQ(bearings_.size(), 1);
   const double azimuth_bs1 = bearings_[0].sensor_angles[0].azimuth;
@@ -247,9 +259,9 @@ TEST_F(MeasurementProcessorTest, BaseStationPeriodUsedCorrectly) {
 
   // Base station 2 (different period: 957000.0 / 2.0 = 478500.0)
   processor_->processBlock(
-      createTestSweepBlock(2, 1000, 50000, 50000, 50000, 50000));
+    createTestSweepBlock(2, 1000, 50000, 50000, 50000, 50000));
   processor_->processBlock(
-      createTestSweepBlock(2, 2000, 100000, 100000, 100000, 100000));
+    createTestSweepBlock(2, 2000, 100000, 100000, 100000, 100000));
 
   ASSERT_EQ(bearings_.size(), 1);
   const double azimuth_bs2 = bearings_[0].sensor_angles[0].azimuth;
@@ -262,7 +274,7 @@ TEST_F(MeasurementProcessorTest, EdgeCaseZeroOffsets) {
   // Test with zero offsets (edge case)
   processor_->processBlock(createTestSweepBlock(1, 1000, 0, 0, 0, 0));
   processor_->processBlock(
-      createTestSweepBlock(1, 2000, 100000, 100000, 100000, 100000));
+    createTestSweepBlock(1, 2000, 100000, 100000, 100000, 100000));
 
   ASSERT_EQ(bearings_.size(), 1);
   // Should not crash and should produce valid results
@@ -273,15 +285,17 @@ TEST_F(MeasurementProcessorTest, EdgeCaseZeroOffsets) {
 TEST_F(MeasurementProcessorTest, NonMatchingPairSkipped) {
   // Send two blocks where second one doesn't match
   processor_->processBlock(
-      createTestSweepBlock(1, 1000, 100000, 100100, 100200, 100300));
-  processor_->processBlock(createTestSweepBlock(1, 2000, 50000, 50100, 50200,
-                                                50300)); // Offset decreased
+    createTestSweepBlock(1, 1000, 100000, 100100, 100200, 100300));
+  processor_->processBlock(
+    createTestSweepBlock(
+      1, 2000, 50000, 50100, 50200,
+      50300));                                           // Offset decreased
 
   ASSERT_EQ(bearings_.size(), 0);
 
   // Send a third block that matches the second
   processor_->processBlock(
-      createTestSweepBlock(1, 3000, 80000, 80100, 80200, 80300));
+    createTestSweepBlock(1, 3000, 80000, 80100, 80200, 80300));
 
   // Should get callback for pair (2, 3)
   ASSERT_EQ(bearings_.size(), 1);
@@ -293,12 +307,14 @@ TEST_F(MeasurementProcessorTest, SpecificBearingAngles10DegMinus30Deg) {
   // Offsets calculated using the corrected formula: atan(sin(beta/2) /
   // tan(p/2))
 
-  const std::uint32_t offset_0_first = 147218; // phase0 = 1.929 rad
-  const std::uint32_t offset_1_first = 358920; // phase1 = 4.703 rad
+  const std::uint32_t offset_0_first = 147218;  // phase0 = 1.929 rad
+  const std::uint32_t offset_1_first = 358920;  // phase1 = 4.703 rad
 
-  processor_->processBlock(createTestSweepBlock(
+  processor_->processBlock(
+    createTestSweepBlock(
       1, 1000, offset_0_first, offset_0_first, offset_0_first, offset_0_first));
-  processor_->processBlock(createTestSweepBlock(
+  processor_->processBlock(
+    createTestSweepBlock(
       1, 2000, offset_1_first, offset_1_first, offset_1_first, offset_1_first));
 
   ASSERT_EQ(bearings_.size(), 1);
@@ -311,11 +327,13 @@ TEST_F(MeasurementProcessorTest, SpecificBearingAngles10DegMinus30Deg) {
 
   // All sensors should have the same angles since they have the same offsets
   for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
-    EXPECT_NEAR(bearings_[0].sensor_angles[i].azimuth,
-                bearings_[0].sensor_angles[0].azimuth, 0.001);
-    EXPECT_NEAR(bearings_[0].sensor_angles[i].elevation,
-                bearings_[0].sensor_angles[0].elevation, 0.001);
+    EXPECT_NEAR(
+      bearings_[0].sensor_angles[i].azimuth,
+      bearings_[0].sensor_angles[0].azimuth, 0.001);
+    EXPECT_NEAR(
+      bearings_[0].sensor_angles[i].elevation,
+      bearings_[0].sensor_angles[0].elevation, 0.001);
   }
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

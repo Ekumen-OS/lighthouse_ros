@@ -16,10 +16,12 @@
 
 #include <cppcrc.h>
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
-std::uint32_t calculateCRC32(const std::vector<std::uint8_t> &data) {
+std::uint32_t calculateCRC32(const std::vector<std::uint8_t> & data)
+{
   return CRC32::CRC32::calc(data.data(), data.size());
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

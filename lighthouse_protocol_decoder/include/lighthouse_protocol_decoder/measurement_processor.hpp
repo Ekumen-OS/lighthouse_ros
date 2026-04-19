@@ -19,25 +19,29 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <utility>
 
 #include "lighthouse_protocol_decoder/constants.hpp"
 #include "lighthouse_protocol_decoder/datatypes.hpp"
 #include "lighthouse_protocol_decoder/logger.hpp"
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 /// Processor for converting sweep data into bearing measurements
-class MeasurementProcessor {
+class MeasurementProcessor
+{
 public:
   /// Constructor
   /// @param callback Callback invoked when bearing measurements are ready
   /// @param logger Logger instance (optional)
-  explicit MeasurementProcessor(BearingCallback callback,
-                                LoggerInterface::Ptr logger = nullptr);
+  explicit MeasurementProcessor(
+    BearingCallback callback,
+    LoggerInterface::Ptr logger = nullptr);
 
   /// Process a sweep block
   /// @param sweep_contents The sweep block to process
-  void processBlock(const SweepBlockRawData &sweep_contents);
+  void processBlock(const SweepBlockRawData & sweep_contents);
 
   /// Reset the processor state
   void reset();
@@ -47,24 +51,27 @@ private:
   /// @param current The current block
   /// @param previous The previous block
   /// @return true if they form a valid pair
-  bool blocksAreMatchedPair(const SweepBlockRawData &current,
-                            const SweepBlockRawData &previous) const;
+  bool blocksAreMatchedPair(
+    const SweepBlockRawData & current,
+    const SweepBlockRawData & previous) const;
 
   /// Extract bearing measurements from a matched pair of blocks
   /// @param current The current block (second sweep)
   /// @param previous The previous block (first sweep)
   /// @param base_station_id The base station ID
   /// @return The extracted bearing measurements
-  SweepBlockBearings extractMeasurements(const SweepBlockRawData &current,
-                                         const SweepBlockRawData &previous,
-                                         std::uint8_t base_station_id) const;
+  SweepBlockBearings extractMeasurements(
+    const SweepBlockRawData & current,
+    const SweepBlockRawData & previous,
+    std::uint8_t base_station_id) const;
 
   /// Calculate polar bearing from two phase measurements
   /// @param phase_beam_0 Phase of first beam (radians)
   /// @param phase_beam_1 Phase of second beam (radians)
   /// @return Pair of (azimuth, elevation) in radians
-  std::pair<double, double> calculatePolarBearing(double phase_beam_0,
-                                                  double phase_beam_1) const;
+  std::pair<double, double> calculatePolarBearing(
+    double phase_beam_0,
+    double phase_beam_1) const;
 
   /// Buffer of sweep blocks per base station (stores last 2 blocks)
   std::map<std::uint8_t, std::deque<SweepBlockRawData>> per_channel_buffer_;
@@ -76,6 +83,6 @@ private:
   LoggerInterface::Ptr logger_;
 };
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-#endif // LIGHTHOUSE_PROTOCOL_DECODER__MEASUREMENT_PROCESSOR_HPP_
+#endif  // LIGHTHOUSE_PROTOCOL_DECODER__MEASUREMENT_PROCESSOR_HPP_

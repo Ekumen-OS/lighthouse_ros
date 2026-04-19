@@ -27,12 +27,12 @@ find_package(ament_cmake REQUIRED)
 
 # Fetch cppcrc library
 include(FetchContent)
-FetchContent_Declare(
+fetchcontent_declare(
   cppcrc
   GIT_REPOSITORY https://github.com/DarrenLevine/cppcrc.git
   GIT_TAG 6360eee1c8966d32b2552ce156b135ec6a3235f1
 )
-FetchContent_MakeAvailable(cppcrc)
+fetchcontent_makeavailable(cppcrc)
 
 # Library
 add_library(${PROJECT_NAME} SHARED
@@ -153,6 +153,9 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}
     test_helpers
   )
+
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
 endif()
 
 ament_package()

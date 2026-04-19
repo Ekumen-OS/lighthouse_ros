@@ -14,14 +14,16 @@
 
 #include "lighthouse_protocol_decoder/datatypes.hpp"
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
-bool DataFrameContents::validNpoly() const { return (npoly & 0x20) == 0; }
+bool DataFrameContents::validNpoly() const {return (npoly & 0x20) == 0;}
 
-std::uint8_t DataFrameContents::slowBit() const { return npoly & 1; }
+std::uint8_t DataFrameContents::slowBit() const {return npoly & 1;}
 
-std::uint8_t DataFrameContents::baseStationId() const {
+std::uint8_t DataFrameContents::baseStationId() const
+{
   return (npoly / 2) + 1;
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

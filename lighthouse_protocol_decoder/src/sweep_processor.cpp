@@ -17,13 +17,16 @@
 #include <set>
 #include <vector>
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
-SweepProcessor::SweepProcessor(SweepCallback callback,
-                               LoggerInterface::Ptr logger)
-    : callback_(std::move(callback)), logger_(std::move(logger)) {}
+SweepProcessor::SweepProcessor(
+  SweepCallback callback,
+  LoggerInterface::Ptr logger)
+: callback_(std::move(callback)), logger_(std::move(logger)) {}
 
-void SweepProcessor::processFrame(const DataFrameContents &frame) {
+void SweepProcessor::processFrame(const DataFrameContents & frame)
+{
   const auto latest_sensor = frame.sid;
   const auto latest_timestamp = frame.timestamp;
 
@@ -34,7 +37,8 @@ void SweepProcessor::processFrame(const DataFrameContents &frame) {
   std::vector<std::uint8_t> sensors_to_remove;
   for (const auto &[sensor, stored_frame] : block_frames_) {
     if (timestampDiff(latest_timestamp, stored_frame.timestamp) >
-        kMaxTimestampDiffForSweep) {
+      kMaxTimestampDiffForSweep)
+    {
       sensors_to_remove.push_back(sensor);
     }
   }
@@ -57,9 +61,10 @@ void SweepProcessor::processFrame(const DataFrameContents &frame) {
   block_frames_.clear();
 }
 
-void SweepProcessor::reset() { block_frames_.clear(); }
+void SweepProcessor::reset() {block_frames_.clear();}
 
-bool SweepProcessor::validateSweep() const {
+bool SweepProcessor::validateSweep() const
+{
   // Must have data from all 4 sensors
   if (block_frames_.size() != kPulseProcessorNSensors) {
     return false;
@@ -88,7 +93,8 @@ bool SweepProcessor::validateSweep() const {
          (channels_seen.size() == 1);
 }
 
-SweepBlockRawData SweepProcessor::completeBlockInformation() const {
+SweepBlockRawData SweepProcessor::completeBlockInformation() const
+{
   SweepBlockRawData sweep_contents;
 
   // Find the base_station_id and reference sensor (the one with sync_offset)
@@ -116,9 +122,9 @@ SweepBlockRawData SweepProcessor::completeBlockInformation() const {
     if (frame.sync_offset == 0 && found_reference) {
       // Calculate offset relative to the reference sensor
       const auto timestamp_delta =
-          timestampDiff(frame.timestamp, reference_sensor_timestamp);
+        timestampDiff(frame.timestamp, reference_sensor_timestamp);
       sensor_measurement.normalized_offset =
-          timestampSum(reference_sensor_offset, timestamp_delta);
+        timestampSum(reference_sensor_offset, timestamp_delta);
     }
 
     sweep_contents.sensors[sensor] = sensor_measurement;
@@ -136,4 +142,4 @@ SweepBlockRawData SweepProcessor::completeBlockInformation() const {
   return sweep_contents;
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

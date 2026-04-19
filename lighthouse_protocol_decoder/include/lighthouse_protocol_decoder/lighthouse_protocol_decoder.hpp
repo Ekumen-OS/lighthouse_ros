@@ -28,10 +28,12 @@
 #include "lighthouse_protocol_decoder/sweep_processor.hpp"
 #include "lighthouse_protocol_decoder/sync_frame_decoder.hpp"
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 /// Main decoder for the Lighthouse protocol
-class LighthouseProtocolDecoder {
+class LighthouseProtocolDecoder
+{
 public:
   /// Operating modes
   enum class Mode { SYNC, DATA };
@@ -40,8 +42,8 @@ public:
   /// @param app_bearing_callback Callback for bearing measurements (optional)
   /// @param logger Logger instance (optional)
   explicit LighthouseProtocolDecoder(
-      BearingCallback app_bearing_callback = nullptr,
-      LoggerInterface::Ptr logger = nullptr);
+    BearingCallback app_bearing_callback = nullptr,
+    LoggerInterface::Ptr logger = nullptr);
 
   /// Process a single byte from the data stream
   /// @param byte The byte to process
@@ -51,7 +53,7 @@ public:
   void reset();
 
   /// Get the current mode
-  Mode getCurrentMode() const { return current_mode_; }
+  Mode getCurrentMode() const {return current_mode_;}
 
 private:
   /// Callback for sync frame detection
@@ -60,15 +62,15 @@ private:
   /// Callback for data frame processing
   /// @param good_sync Indicates if synchronization is good
   /// @param frame_data The decoded frame data
-  void dataframeCallback(bool good_sync, const DataFrameContents &frame_data);
+  void dataframeCallback(bool good_sync, const DataFrameContents & frame_data);
 
   /// Callback for complete sweep data
   /// @param sweep_contents The sweep data
-  void sweepCallback(const SweepBlockRawData &sweep_contents);
+  void sweepCallback(const SweepBlockRawData & sweep_contents);
 
   /// Callback for bearing measurements
   /// @param sensor_bearings The bearing measurements
-  void measurementCallback(const SweepBlockBearings &sensor_bearings);
+  void measurementCallback(const SweepBlockBearings & sensor_bearings);
 
   /// Current operating mode
   Mode current_mode_;
@@ -87,7 +89,7 @@ private:
 
   /// OOTX decoders (one per base station, created on demand)
   std::array<std::unique_ptr<OOTXFrameDecoder>, kDeckLighthouseMaxNBs>
-      ootx_decoders_;
+  ootx_decoders_;
 
   /// Previous timestamp0 values for each base station (for slow bit filtering)
   std::array<std::uint32_t, kDeckLighthouseMaxNBs> prev_timestamp0_;
@@ -99,6 +101,6 @@ private:
   LoggerInterface::Ptr logger_;
 };
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-#endif // LIGHTHOUSE_PROTOCOL_DECODER__LIGHTHOUSE_PROTOCOL_DECODER_HPP_
+#endif  // LIGHTHOUSE_PROTOCOL_DECODER__LIGHTHOUSE_PROTOCOL_DECODER_HPP_

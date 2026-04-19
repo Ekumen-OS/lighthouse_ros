@@ -19,7 +19,8 @@
 #include <cstdint>
 #include <map>
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 /// Number of sensors in the lighthouse system
 constexpr std::size_t kPulseProcessorNSensors = 4;
@@ -45,12 +46,12 @@ constexpr std::uint32_t kMaxTimestampDiffForBlockMatch = 220000;
 /// The cycle times from the Lighthouse base stations expressed in 24 MHz clock
 /// (original values are in 48 MHz, divided by 2)
 const std::map<std::uint8_t, double> kBasestationPeriods = {
-    {1, 959000.0 / 2.0},  {2, 957000.0 / 2.0},  {3, 953000.0 / 2.0},
-    {4, 949000.0 / 2.0},  {5, 947000.0 / 2.0},  {6, 943000.0 / 2.0},
-    {7, 941000.0 / 2.0},  {8, 939000.0 / 2.0},  {9, 937000.0 / 2.0},
-    {10, 929000.0 / 2.0}, {11, 919000.0 / 2.0}, {12, 911000.0 / 2.0},
-    {13, 907000.0 / 2.0}, {14, 901000.0 / 2.0}, {15, 893000.0 / 2.0},
-    {16, 887000.0 / 2.0},
+  {1, 959000.0 / 2.0}, {2, 957000.0 / 2.0}, {3, 953000.0 / 2.0},
+  {4, 949000.0 / 2.0}, {5, 947000.0 / 2.0}, {6, 943000.0 / 2.0},
+  {7, 941000.0 / 2.0}, {8, 939000.0 / 2.0}, {9, 937000.0 / 2.0},
+  {10, 929000.0 / 2.0}, {11, 919000.0 / 2.0}, {12, 911000.0 / 2.0},
+  {13, 907000.0 / 2.0}, {14, 901000.0 / 2.0}, {15, 893000.0 / 2.0},
+  {16, 887000.0 / 2.0},
 };
 
 /// Calculate the difference between two 24-bit timestamps with overflow
@@ -58,7 +59,8 @@ const std::map<std::uint8_t, double> kBasestationPeriods = {
 /// @param a First timestamp
 /// @param b Second timestamp
 /// @return The difference (a - b) with proper wrap-around
-inline std::uint32_t timestampDiff(std::uint32_t a, std::uint32_t b) {
+inline std::uint32_t timestampDiff(std::uint32_t a, std::uint32_t b)
+{
   return (kTimestampCounterMask + 1 + a - b) & kTimestampCounterMask;
 }
 
@@ -66,7 +68,8 @@ inline std::uint32_t timestampDiff(std::uint32_t a, std::uint32_t b) {
 /// @param a First timestamp
 /// @param b Second timestamp
 /// @return The sum (a + b) with proper wrap-around
-inline std::uint32_t timestampSum(std::uint32_t a, std::uint32_t b) {
+inline std::uint32_t timestampSum(std::uint32_t a, std::uint32_t b)
+{
   return (a + b) & kTimestampCounterMask;
 }
 
@@ -76,11 +79,13 @@ inline std::uint32_t timestampSum(std::uint32_t a, std::uint32_t b) {
 /// @param b Second timestamp
 /// @param limit The threshold to compare against
 /// @return true if |a - b| > limit
-inline bool timestampAbsDiffLargerThan(std::uint32_t a, std::uint32_t b,
-                                       std::uint32_t limit) {
+inline bool timestampAbsDiffLargerThan(
+  std::uint32_t a, std::uint32_t b,
+  std::uint32_t limit)
+{
   return timestampDiff(a + limit, b) > (limit * 2);
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-#endif // LIGHTHOUSE_PROTOCOL_DECODER__CONSTANTS_HPP_
+#endif  // LIGHTHOUSE_PROTOCOL_DECODER__CONSTANTS_HPP_

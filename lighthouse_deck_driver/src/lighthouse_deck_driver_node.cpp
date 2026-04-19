@@ -26,21 +26,22 @@
 
 using namespace std::chrono_literals;
 
-namespace lighthouse_deck_driver {
+namespace lighthouse_deck_driver
+{
 
 LighthouseDeckDriverNode::LighthouseDeckDriverNode(
-    const rclcpp::NodeOptions &options)
-    : Node("lighthouse_deck_driver", options) {
-
+  const rclcpp::NodeOptions & options)
+: Node("lighthouse_deck_driver", options)
+{
   RCLCPP_INFO(get_logger(), "Starting Lighthouse Shield Driver node");
 
   rcl_interfaces::msg::ParameterDescriptor device_desc;
   device_desc.description =
-      "Serial device path for the Lighthouse Shield (e.g., /dev/ttyUSB0)";
+    "Serial device path for the Lighthouse Shield (e.g., /dev/ttyUSB0)";
   declare_parameter("device", "", device_desc);
 
-  const std::array<int, 6> valid_baudrates{9600,  19200,  38400,
-                                           57600, 115200, 230400};
+  const std::array<int, 6> valid_baudrates{9600, 19200, 38400,
+    57600, 115200, 230400};
   std::ostringstream valid_baudrates_stream;
   for (size_t i = 0; i < valid_baudrates.size(); ++i) {
     if (i > 0) {
@@ -52,14 +53,14 @@ LighthouseDeckDriverNode::LighthouseDeckDriverNode(
 
   rcl_interfaces::msg::ParameterDescriptor baudrate_desc;
   baudrate_desc.description =
-      "Baudrate for serial communication with the Lighthouse Shield. Valid "
-      "values are: " +
-      valid_baudrates_list;
+    "Baudrate for serial communication with the Lighthouse Shield. Valid "
+    "values are: " +
+    valid_baudrates_list;
   declare_parameter("baudrate", 230400, baudrate_desc);
 
   rcl_interfaces::msg::ParameterDescriptor frame_id_desc;
   frame_id_desc.description =
-      "Frame ID to use in published sensor measurement messages";
+    "Frame ID to use in published sensor measurement messages";
   declare_parameter("frame_id", "lighthouse_deck", frame_id_desc);
 
   device_ = get_parameter("device").as_string();
@@ -72,9 +73,11 @@ LighthouseDeckDriverNode::LighthouseDeckDriverNode(
   }
 
   if (std::find(valid_baudrates.begin(), valid_baudrates.end(), baudrate_) ==
-      valid_baudrates.end()) {
-    RCLCPP_FATAL(get_logger(), "Invalid baudrate. Valid options are: %s",
-                 valid_baudrates_list.c_str());
+    valid_baudrates.end())
+  {
+    RCLCPP_FATAL(
+      get_logger(), "Invalid baudrate. Valid options are: %s",
+      valid_baudrates_list.c_str());
     throw std::runtime_error("Invalid baudrate");
   }
 
@@ -83,54 +86,57 @@ LighthouseDeckDriverNode::LighthouseDeckDriverNode(
   RCLCPP_INFO(get_logger(), "Frame ID: %s", frame_id_.c_str());
 
   bearings_publisher_ =
-      create_publisher<lighthouse_deck_msgs::msg::LighthouseDeckMeasurement>(
-          "lighthouse", rclcpp::QoS(10).best_effort());
+    create_publisher<lighthouse_deck_msgs::msg::LighthouseDeckMeasurement>(
+    "lighthouse", rclcpp::QoS(10).best_effort());
 
   logger_adapter_ = std::make_shared<ROS2LoggerAdapter>(get_logger());
 
   auto bearing_callback =
-      [this](const lighthouse_protocol_decoder::SweepBlockBearings
-                 &sensor_bearings) { this->bearingCallback(sensor_bearings); };
+    [this](const lighthouse_protocol_decoder::SweepBlockBearings
+      & sensor_bearings) {this->bearingCallback(sensor_bearings);};
 
   protocol_decoder_ =
-      std::make_unique<lighthouse_protocol_decoder::LighthouseProtocolDecoder>(
-          bearing_callback, logger_adapter_);
+    std::make_unique<lighthouse_protocol_decoder::LighthouseProtocolDecoder>(
+    bearing_callback, logger_adapter_);
 
   initializeSerial();
 
   RCLCPP_INFO(get_logger(), "Lighthouse Deck Driver node started");
 }
 
-LighthouseDeckDriverNode::~LighthouseDeckDriverNode() {
+LighthouseDeckDriverNode::~LighthouseDeckDriverNode()
+{
   RCLCPP_INFO(get_logger(), "Shutting down Lighthouse Deck Driver node");
   if (serial_port_) {
     try {
       serial_port_->close();
-    } catch (const std::exception &e) {
+    } catch (const std::exception & e) {
       RCLCPP_ERROR(get_logger(), "Error closing serial port: %s", e.what());
     }
   }
 }
 
-void LighthouseDeckDriverNode::initializeSerial() {
-  RCLCPP_INFO(get_logger(),
-              "Initializing serial device %s with bootloader baudrate: %d",
-              device_.c_str(), BOOTLOADER_BAUDRATE);
+void LighthouseDeckDriverNode::initializeSerial()
+{
+  RCLCPP_INFO(
+    get_logger(),
+    "Initializing serial device %s with bootloader baudrate: %d",
+    device_.c_str(), BOOTLOADER_BAUDRATE);
 
   try {
     serial_port_ = std::make_unique<lighthouse_deck_utils::SerialPort>();
 
     lighthouse_deck_utils::SerialPort::PortConfiguration bootloader_config;
     bootloader_config.baud_rate =
-        static_cast<lighthouse_deck_utils::SerialPort::BaudRate>(
-            BOOTLOADER_BAUDRATE);
+      static_cast<lighthouse_deck_utils::SerialPort::BaudRate>(
+      BOOTLOADER_BAUDRATE);
     bootloader_config.data_bits =
-        lighthouse_deck_utils::SerialPort::DataBits::EIGHT;
+      lighthouse_deck_utils::SerialPort::DataBits::EIGHT;
     bootloader_config.stop_bits =
-        lighthouse_deck_utils::SerialPort::StopBits::ONE;
+      lighthouse_deck_utils::SerialPort::StopBits::ONE;
     bootloader_config.parity = lighthouse_deck_utils::SerialPort::Parity::NONE;
     bootloader_config.flow_control =
-        lighthouse_deck_utils::SerialPort::FlowControl::NONE;
+      lighthouse_deck_utils::SerialPort::FlowControl::NONE;
 
     if (!serial_port_->open(device_, bootloader_config)) {
       throw std::runtime_error("Failed to open serial port");
@@ -150,50 +156,56 @@ void LighthouseDeckDriverNode::initializeSerial() {
     serial_port_->send(&boot_firmware_cmd, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    RCLCPP_INFO(get_logger(), "Switching to main firmware baudrate: %d",
-                baudrate_);
+    RCLCPP_INFO(
+      get_logger(), "Switching to main firmware baudrate: %d",
+      baudrate_);
 
     lighthouse_deck_utils::SerialPort::PortConfiguration main_config;
     main_config.baud_rate =
-        static_cast<lighthouse_deck_utils::SerialPort::BaudRate>(baudrate_);
+      static_cast<lighthouse_deck_utils::SerialPort::BaudRate>(baudrate_);
     main_config.data_bits = lighthouse_deck_utils::SerialPort::DataBits::EIGHT;
     main_config.stop_bits = lighthouse_deck_utils::SerialPort::StopBits::ONE;
     main_config.parity = lighthouse_deck_utils::SerialPort::Parity::NONE;
     main_config.flow_control =
-        lighthouse_deck_utils::SerialPort::FlowControl::NONE;
+      lighthouse_deck_utils::SerialPort::FlowControl::NONE;
 
     if (!serial_port_->setConfiguration(main_config)) {
       throw std::runtime_error("Failed to set serial port configuration");
     }
 
-    serial_port_->setCallback([this](const uint8_t *data, std::size_t length) {
-      this->receiveCallback(data, length);
-    });
+    serial_port_->setCallback(
+      [this](const uint8_t * data, std::size_t length) {
+        this->receiveCallback(data, length);
+      });
 
     RCLCPP_INFO(get_logger(), "Serial port initialized!");
-
-  } catch (const std::exception &e) {
-    RCLCPP_FATAL(get_logger(), "Failed to initialize serial device: %s",
-                 e.what());
+  } catch (const std::exception & e) {
+    RCLCPP_FATAL(
+      get_logger(), "Failed to initialize serial device: %s",
+      e.what());
     throw;
   }
 }
 
-void LighthouseDeckDriverNode::receiveCallback(const uint8_t *data,
-                                               std::size_t length) {
+void LighthouseDeckDriverNode::receiveCallback(
+  const uint8_t * data,
+  std::size_t length)
+{
   for (size_t i = 0; i < length; ++i) {
     protocol_decoder_->processByte(data[i]);
   }
 }
 
 void LighthouseDeckDriverNode::bearingCallback(
-    const lighthouse_protocol_decoder::SweepBlockBearings &sensor_bearings) {
+  const lighthouse_protocol_decoder::SweepBlockBearings & sensor_bearings)
+{
   static int32_t measurements_count = 0;
   measurements_count++;
 
-  RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000,
-                       "Publishing bearing measurements published: %d",
-                       measurements_count);
+  RCLCPP_INFO_THROTTLE(
+    get_logger(), *get_clock(), 1000,
+    "Publishing bearing measurements published: %d",
+    measurements_count);
 
   auto msg = lighthouse_deck_msgs::msg::LighthouseDeckMeasurement();
   msg.header.stamp = now();
@@ -202,7 +214,7 @@ void LighthouseDeckDriverNode::bearingCallback(
   // Publish data from a single base station
   // Each array contains one element for this base station
   msg.station_id.push_back(
-      static_cast<int32_t>(sensor_bearings.base_station_id));
+    static_cast<int32_t>(sensor_bearings.base_station_id));
   msg.azimuth_0.push_back(sensor_bearings.sensor_angles[0].azimuth);
   msg.azimuth_1.push_back(sensor_bearings.sensor_angles[1].azimuth);
   msg.azimuth_2.push_back(sensor_bearings.sensor_angles[2].azimuth);
@@ -215,9 +227,9 @@ void LighthouseDeckDriverNode::bearingCallback(
   bearings_publisher_->publish(msg);
 }
 
-} // namespace lighthouse_deck_driver
+}  // namespace lighthouse_deck_driver
 
 #include "rclcpp_components/register_node_macro.hpp"
 
 RCLCPP_COMPONENTS_REGISTER_NODE(
-    lighthouse_deck_driver::LighthouseDeckDriverNode)
+  lighthouse_deck_driver::LighthouseDeckDriverNode)

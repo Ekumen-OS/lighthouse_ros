@@ -14,30 +14,35 @@
 
 #include <gtest/gtest.h>
 
+#include <vector>
+
 #include "lighthouse_protocol_decoder/sweep_processor.hpp"
 #include "test_helpers.hpp"
 
-#include <vector>
-
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 using test_helpers::createDataFrameContents;
 
 // Alias for backward compatibility with existing test code
-inline DataFrameContents createTestFrame(std::uint8_t sid, std::uint8_t npoly,
-                                         std::uint32_t timestamp,
-                                         std::uint32_t sync_offset = 0) {
+inline DataFrameContents createTestFrame(
+  std::uint8_t sid, std::uint8_t npoly,
+  std::uint32_t timestamp,
+  std::uint32_t sync_offset = 0)
+{
   return createDataFrameContents(sid, npoly, timestamp, sync_offset);
 }
 
-class SweepProcessorTest : public ::testing::Test {
+class SweepProcessorTest : public ::testing::Test
+{
 protected:
-  void SetUp() override {
+  void SetUp() override
+  {
     sweeps_.clear();
 
     processor_ = std::make_unique<SweepProcessor>(
-        [this](const SweepBlockRawData &sweep) { sweeps_.push_back(sweep); },
-        nullptr);
+      [this](const SweepBlockRawData & sweep) {sweeps_.push_back(sweep);},
+      nullptr);
   }
 
   std::unique_ptr<SweepProcessor> processor_;
@@ -47,7 +52,7 @@ protected:
 TEST_F(SweepProcessorTest, ConstructorWorksWithoutLogger) {
   std::vector<SweepBlockRawData> sweeps;
   auto processor_no_logger = std::make_unique<SweepProcessor>(
-      [&sweeps](const SweepBlockRawData &sweep) { sweeps.push_back(sweep); });
+    [&sweeps](const SweepBlockRawData & sweep) {sweeps.push_back(sweep);});
   ASSERT_EQ(sweeps.size(), 0);
 }
 
@@ -68,7 +73,7 @@ TEST_F(SweepProcessorTest, CompleteSweepTriggersCallback) {
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001));
   processor_->processFrame(createTestFrame(2, 0x00, 1002));
-  processor_->processFrame(createTestFrame(3, 0x20, 1003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 1);
   EXPECT_EQ(sweeps_[0].base_station_id, 1);
@@ -89,8 +94,8 @@ TEST_F(SweepProcessorTest, InvalidSweepWithTwoValidNpolys) {
   // Only 2 sensors have valid npoly (need exactly 3)
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001));
-  processor_->processFrame(createTestFrame(2, 0x20, 1002)); // Invalid
-  processor_->processFrame(createTestFrame(3, 0x20, 1003)); // Invalid
+  processor_->processFrame(createTestFrame(2, 0x20, 1002));  // Invalid
+  processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid
 
   ASSERT_EQ(sweeps_.size(), 0);
 }
@@ -110,7 +115,7 @@ TEST_F(SweepProcessorTest, InvalidSweepWithNoSyncOffset) {
   processor_->processFrame(createTestFrame(0, 0x00, 1000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001));
   processor_->processFrame(createTestFrame(2, 0x00, 1002));
-  processor_->processFrame(createTestFrame(3, 0x20, 1003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 0);
 }
@@ -120,7 +125,7 @@ TEST_F(SweepProcessorTest, InvalidSweepWithMultipleSyncOffsets) {
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001, 51000));
   processor_->processFrame(createTestFrame(2, 0x00, 1002));
-  processor_->processFrame(createTestFrame(3, 0x20, 1003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 0);
 }
@@ -132,7 +137,7 @@ TEST_F(SweepProcessorTest, InvalidSweepWithMismatchedBaseStations) {
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x02, 1001));
   processor_->processFrame(createTestFrame(2, 0x00, 1002));
-  processor_->processFrame(createTestFrame(3, 0x20, 1003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 0);
 }
@@ -142,7 +147,7 @@ TEST_F(SweepProcessorTest, NormalizedOffsetsCalculatedCorrectly) {
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1005));
   processor_->processFrame(createTestFrame(2, 0x00, 1010));
-  processor_->processFrame(createTestFrame(3, 0x20, 1015)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1015));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 1);
 
@@ -170,7 +175,7 @@ TEST_F(SweepProcessorTest, OldFramesAreDiscarded) {
 
   // Send frames to complete the sweep
   processor_->processFrame(createTestFrame(2, 0x00, 0x11001));
-  processor_->processFrame(createTestFrame(3, 0x20, 0x11002)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 0x11002));  // Invalid npoly
 
   // Should not trigger callback because sensor 0 was discarded
   ASSERT_EQ(sweeps_.size(), 0);
@@ -188,7 +193,7 @@ TEST_F(SweepProcessorTest, ResetClearsState) {
   processor_->processFrame(createTestFrame(0, 0x00, 2000, 60000));
   processor_->processFrame(createTestFrame(1, 0x00, 2001));
   processor_->processFrame(createTestFrame(2, 0x00, 2002));
-  processor_->processFrame(createTestFrame(3, 0x20, 2003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 2003));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 1);
 }
@@ -198,13 +203,13 @@ TEST_F(SweepProcessorTest, MultipleConsecutiveSweeps) {
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001));
   processor_->processFrame(createTestFrame(2, 0x00, 1002));
-  processor_->processFrame(createTestFrame(3, 0x20, 1003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid npoly
 
   // Second sweep - base station 2 (npoly=0x02: (2/2)+1=2)
   processor_->processFrame(createTestFrame(0, 0x02, 2000, 60000));
   processor_->processFrame(createTestFrame(1, 0x02, 2001));
   processor_->processFrame(createTestFrame(2, 0x02, 2002));
-  processor_->processFrame(createTestFrame(3, 0x20, 2003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 2003));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 2);
   EXPECT_EQ(sweeps_[0].base_station_id, 1);
@@ -216,7 +221,7 @@ TEST_F(SweepProcessorTest, DifferentSensorWithSyncOffset) {
   processor_->processFrame(createTestFrame(0, 0x00, 1000));
   processor_->processFrame(createTestFrame(1, 0x00, 1005));
   processor_->processFrame(createTestFrame(2, 0x00, 1010, 50000));
-  processor_->processFrame(createTestFrame(3, 0x20, 1015)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1015));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 1);
 
@@ -228,17 +233,18 @@ TEST_F(SweepProcessorTest, DifferentSensorWithSyncOffset) {
 
   // Other sensors calculated relative to sensor 2
   // Sensor 0: offset = 50000 + (1000 - 1010) = 49990 (with 24-bit wrap)
-  EXPECT_EQ(sweeps_[0].sensors[0].normalized_offset,
-            (50000 + timestampDiff(1000, 1010)) & 0xFFFFFF);
+  EXPECT_EQ(
+    sweeps_[0].sensors[0].normalized_offset,
+    (50000 + timestampDiff(1000, 1010)) & 0xFFFFFF);
 }
 
 TEST_F(SweepProcessorTest, BaseStationExtractionFromNpoly) {
   // Test base station 3 (npoly=0x04: (4/2)+1=3)
   processor_->processFrame(
-      createTestFrame(0, 0x04, 1000, 50000)); // 0x04 = 0b00000100
+    createTestFrame(0, 0x04, 1000, 50000));   // 0x04 = 0b00000100
   processor_->processFrame(createTestFrame(1, 0x04, 1001));
   processor_->processFrame(createTestFrame(2, 0x04, 1002));
-  processor_->processFrame(createTestFrame(3, 0x20, 1003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 1);
   EXPECT_EQ(sweeps_[0].base_station_id, 3);
@@ -249,7 +255,7 @@ TEST_F(SweepProcessorTest, BufferClearsAfterValidSweep) {
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001));
   processor_->processFrame(createTestFrame(2, 0x00, 1002));
-  processor_->processFrame(createTestFrame(3, 0x20, 1003)); // Invalid npoly
+  processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid npoly
 
   ASSERT_EQ(sweeps_.size(), 1);
 
@@ -261,4 +267,4 @@ TEST_F(SweepProcessorTest, BufferClearsAfterValidSweep) {
   ASSERT_EQ(sweeps_.size(), 1);
 }
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder

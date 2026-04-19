@@ -22,16 +22,19 @@
 #include "lighthouse_protocol_decoder/datatypes.hpp"
 #include "lighthouse_protocol_decoder/logger.hpp"
 
-namespace lighthouse_protocol_decoder {
+namespace lighthouse_protocol_decoder
+{
 
 /// Decoder for sync frames (12 bytes of 0xFF)
-class SyncFrameDecoder {
+class SyncFrameDecoder
+{
 public:
   /// Constructor
   /// @param sync_callback Callback invoked when sync frame is detected
   /// @param logger Logger instance for debug messages (optional)
-  explicit SyncFrameDecoder(SyncFrameDetectedCallback sync_callback,
-                            LoggerInterface::Ptr logger = nullptr);
+  explicit SyncFrameDecoder(
+    SyncFrameDetectedCallback sync_callback,
+    LoggerInterface::Ptr logger = nullptr);
 
   /// Process a single byte from the data stream
   /// @param byte The byte to process
@@ -51,6 +54,6 @@ private:
   LoggerInterface::Ptr logger_;
 };
 
-} // namespace lighthouse_protocol_decoder
+}    // namespace lighthouse_protocol_decoder
 
-#endif // LIGHTHOUSE_PROTOCOL_DECODER__SYNC_FRAME_DECODER_HPP_
+#endif  // LIGHTHOUSE_PROTOCOL_DECODER__SYNC_FRAME_DECODER_HPP_
