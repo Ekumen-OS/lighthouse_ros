@@ -14,6 +14,7 @@
 
 #include "lighthouse_protocol_decoder/measurement_processor.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace lighthouse_protocol_decoder
@@ -22,7 +23,8 @@ namespace lighthouse_protocol_decoder
 MeasurementProcessor::MeasurementProcessor(
   BearingCallback callback,
   LoggerInterface::Ptr logger)
-: callback_(std::move(callback)), logger_(std::move(logger)) {}
+: callback_(std::move(callback)),
+  logger_(logger ? std::move(logger) : std::make_shared<NullLogger>()) {}
 
 void MeasurementProcessor::processBlock(
   const SweepBlockRawData & sweep_contents)
@@ -59,6 +61,14 @@ void MeasurementProcessor::processBlock(
   const auto sensor_bearings =
     extractMeasurements(current, previous, base_station_id);
 
+  // Clear the buffer after a successful match so the next block starts a fresh
+  // pair
+  per_channel_buffer_[base_station_id].clear();
+
+  if (!bearingsAreValid(sensor_bearings)) {
+    return;
+  }
+
   if (callback_) {
     callback_(sensor_bearings);
   }
@@ -73,6 +83,11 @@ bool MeasurementProcessor::blocksAreMatchedPair(
   if (previous.sensors[0].normalized_offset >
     current.sensors[0].normalized_offset)
   {
+    logger_->debug(
+      "Sweep pair rejected: sensor[0] offset did not increase (" +
+      std::to_string(previous.sensors[0].normalized_offset) +
+      " -> " +
+      std::to_string(current.sensors[0].normalized_offset) + ")");
     return false;
   }
 
@@ -81,6 +96,11 @@ bool MeasurementProcessor::blocksAreMatchedPair(
     timestampDiff(current.timestamp, previous.timestamp);
 
   if (block_delta_timestamp > kMaxTimestampDiffForBlockMatch) {
+    logger_->debug(
+      "Sweep pair rejected: timestamp delta between blocks (" +
+      std::to_string(block_delta_timestamp) +
+      " ticks) exceeds half-rotation limit (" +
+      std::to_string(kMaxTimestampDiffForBlockMatch) + " ticks)");
     return false;
   }
 
@@ -122,6 +142,66 @@ MeasurementProcessor::extractMeasurements(
   }
 
   return sensor_bearings;
+}
+
+bool MeasurementProcessor::bearingsAreValid(const SweepBlockBearings & bearings) const
+{
+  // Physical constraint: at a reference distance, the angular spread across
+  // sensors must be consistent with the sensor's physical baseline.
+  // The maximum angle range is atan(kMaxSensorBaseline / kReferenceDistance).
+  constexpr double kReferenceDistance = 1.5;     // meters
+  constexpr double kMaxSensorBaseline = 0.0335;  // meters
+  const double max_angle_range_deg =
+    std::atan(kMaxSensorBaseline / kReferenceDistance) * 180.0 / M_PI;
+
+  const auto az_mm = std::minmax_element(
+    bearings.sensor_angles.begin(), bearings.sensor_angles.end(),
+    [](const auto & a, const auto & b) {return a.azimuth < b.azimuth;});
+  const auto el_mm = std::minmax_element(
+    bearings.sensor_angles.begin(), bearings.sensor_angles.end(),
+    [](const auto & a, const auto & b) {return a.elevation < b.elevation;});
+
+  const double az_range_deg = az_mm.second->azimuth - az_mm.first->azimuth;
+  const double el_range_deg = el_mm.second->elevation - el_mm.first->elevation;
+
+  if (az_range_deg > max_angle_range_deg) {
+    logger_->warning(
+      "Bearing rejected: azimuth spread across sensors (" +
+      std::to_string(az_range_deg) +
+      " deg) exceeds physical limit (" +
+      std::to_string(max_angle_range_deg) + " deg)");
+    return false;
+  }
+
+  if (el_range_deg > max_angle_range_deg) {
+    logger_->warning(
+      "Bearing rejected: elevation spread across sensors (" +
+      std::to_string(el_range_deg) +
+      " deg) exceeds physical limit (" +
+      std::to_string(max_angle_range_deg) + " deg)");
+    return false;
+  }
+
+  // Winding order check: traversing sensors in the physical order 0, 1, 3, 2
+  // must form a clockwise polygon in (azimuth, elevation) space when the
+  // station faces the deck from above. Computed via the shoelace formula;
+  // a negative signed area indicates clockwise winding.
+  constexpr std::array<std::size_t, 4> kSensorWindingOrder = {0, 1, 3, 2};
+  double signed_area_2 = 0.0;
+  for (std::size_t k = 0; k < kSensorWindingOrder.size(); ++k) {
+    const auto & curr = bearings.sensor_angles[kSensorWindingOrder[k]];
+    const auto & next =
+      bearings.sensor_angles[kSensorWindingOrder[(k + 1) % kSensorWindingOrder.size()]];
+    signed_area_2 += curr.azimuth * next.elevation - next.azimuth * curr.elevation;
+  }
+  if (signed_area_2 >= 0.0) {
+    logger_->warning(
+      "Bearing rejected: sensor winding order 0,1,3,2 is not clockwise "
+      "(signed area: " + std::to_string(signed_area_2) + " deg^2)");
+    return false;
+  }
+
+  return true;
 }
 
 std::pair<double, double>

@@ -14,6 +14,9 @@
 
 #include "test_helpers.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 #include "lighthouse_protocol_decoder/constants.hpp"
 
 namespace lighthouse_protocol_decoder
@@ -223,6 +226,102 @@ createSweepBlockRawData(
   block.sensors[2].normalized_offset = offset2;
   block.sensors[3].normalized_offset = offset3;
   return block;
+}
+
+std::pair<SweepBlockRawData, SweepBlockRawData>
+createSweepBlocksFromGeometry(
+  double station_x, double station_y, double station_z,
+  double deck_x, double deck_y, double deck_z,
+  std::uint8_t base_station_id,
+  std::uint32_t timestamp_first,
+  std::uint32_t timestamp_second)
+{
+  // Sensor positions in deck frame (meters)
+  constexpr double kSensorXDistance = 0.0296;
+  constexpr double kSensorYDistance = 0.0150;
+
+  const std::array<std::pair<double, double>, 4> sensor_offsets = {{
+    {-kSensorXDistance / 2.0, +kSensorYDistance / 2.0},  // sensor 0: top-left
+    {-kSensorXDistance / 2.0, -kSensorYDistance / 2.0},  // sensor 1: bottom-left
+    {+kSensorXDistance / 2.0, +kSensorYDistance / 2.0},  // sensor 2: top-right
+    {+kSensorXDistance / 2.0, -kSensorYDistance / 2.0},  // sensor 3: bottom-right
+  }};
+
+  // Get period for this base station
+  const double period = kBasestationPeriods.at(base_station_id);
+
+  std::array<std::uint32_t, 4> offsets_sweep0;
+  std::array<std::uint32_t, 4> offsets_sweep1;
+
+  for (std::size_t i = 0; i < 4; ++i) {
+    // Compute sensor position in world frame
+    const double sensor_x = deck_x + sensor_offsets[i].first;
+    const double sensor_y = deck_y + sensor_offsets[i].second;
+    const double sensor_z = deck_z;
+
+    // Compute vector from station to sensor
+    const double dx = sensor_x - station_x;
+    const double dy = sensor_y - station_y;
+    const double dz = sensor_z - station_z;
+
+    // Compute azimuth and elevation
+    const double azimuth_rad = std::atan2(dy, dx);
+    const double elevation_rad = std::atan2(dz, std::sqrt(dx * dx + dy * dy));
+
+    // Invert lighthouse decoder math to get phases
+    // From measurement_processor.cpp:
+    //   azimuth = ((phase_0 + phase_1) / 2) - π
+    //   elevation = atan(sin(beta/2) / tan(p/2)) where beta = (phase_1 - phase_0) - 2π/3
+
+    const double p_half = M_PI / 6.0;  // p/2 where p = π/3 (60 degrees)
+    const double tan_elev = std::tan(elevation_rad);
+    const double tan_p_half = std::tan(p_half);
+    const double sin_beta_half = std::clamp(tan_elev * tan_p_half, -1.0, 1.0);
+    const double beta = 2.0 * std::asin(sin_beta_half);
+
+    const double sum_phases = 2.0 * (azimuth_rad + M_PI);
+    const double diff_phases = beta + (2.0 * M_PI / 3.0);
+
+    double phase_0 = (sum_phases - diff_phases) / 2.0;
+    double phase_1 = (sum_phases + diff_phases) / 2.0;
+
+    // Normalize to [0, 2π)
+    phase_0 = std::fmod(phase_0, 2.0 * M_PI);
+    if (phase_0 < 0.0) {phase_0 += 2.0 * M_PI;}
+    phase_1 = std::fmod(phase_1, 2.0 * M_PI);
+    if (phase_1 < 0.0) {phase_1 += 2.0 * M_PI;}
+
+    // Convert phases to offsets
+    offsets_sweep0[i] = static_cast<std::uint32_t>((phase_0 / (2.0 * M_PI)) * period);
+    offsets_sweep1[i] = static_cast<std::uint32_t>((phase_1 / (2.0 * M_PI)) * period);
+  }
+
+  SweepBlockRawData block_first = createSweepBlockRawData(
+    base_station_id, timestamp_first,
+    offsets_sweep0[0], offsets_sweep0[1], offsets_sweep0[2], offsets_sweep0[3]);
+
+  SweepBlockRawData block_second = createSweepBlockRawData(
+    base_station_id, timestamp_second,
+    offsets_sweep1[0], offsets_sweep1[1], offsets_sweep1[2], offsets_sweep1[3]);
+
+  return {block_first, block_second};
+}
+
+std::pair<SweepBlockRawData, SweepBlockRawData>
+createRealisticSweepBlocks(
+  std::uint8_t base_station_id,
+  std::uint32_t timestamp_first,
+  std::uint32_t timestamp_second)
+{
+  // Default geometry: station at origin, deck 2m in front and 2cm below
+  // This produces realistic angular spreads that pass validation:
+  //   - Azimuth range: ~0.43° (< 1.28° limit)
+  //   - Elevation range: ~0.01° (< 1.28° limit)
+  //   - Clockwise winding order
+  return createSweepBlocksFromGeometry(
+    0.0, 0.0, 0.0,      // station at origin
+    2.0, 0.0, -0.02,    // deck 2m in front, 2cm below
+    base_station_id, timestamp_first, timestamp_second);
 }
 
 }    // namespace test_helpers

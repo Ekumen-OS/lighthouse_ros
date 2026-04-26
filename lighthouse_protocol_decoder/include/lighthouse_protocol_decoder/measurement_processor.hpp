@@ -73,6 +73,12 @@ private:
     double phase_beam_0,
     double phase_beam_1) const;
 
+  /// Validate that the spread of bearing angles across sensors is physically
+  /// plausible given the sensor's maximum baseline
+  /// @param bearings The bearing measurements to validate
+  /// @return true if the bearings pass the sanity check
+  bool bearingsAreValid(const SweepBlockBearings & bearings) const;
+
   /// Buffer of sweep blocks per base station (stores last 2 blocks)
   std::map<std::uint8_t, std::deque<SweepBlockRawData>> per_channel_buffer_;
 
