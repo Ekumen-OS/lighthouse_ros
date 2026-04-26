@@ -24,6 +24,7 @@ namespace lighthouse_protocol_decoder
 {
 
 using test_helpers::createSweepBlockRawData;
+using test_helpers::StdoutLogger;
 
 // Alias for backward compatibility with existing test code
 inline SweepBlockRawData
@@ -48,7 +49,7 @@ protected:
       [this](const SweepBlockBearings & bearings) {
         bearings_.push_back(bearings);
       },
-      nullptr);
+      std::make_shared<StdoutLogger>());
   }
 
   std::unique_ptr<MeasurementProcessor> processor_;
@@ -72,10 +73,10 @@ TEST_F(MeasurementProcessorTest, NoCallbackWithSingleBlock) {
 
 TEST_F(MeasurementProcessorTest, CallbackWithTwoMatchingBlocks) {
   // Send two blocks from the same base station that form a matched pair
-  processor_->processBlock(
-    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
-  processor_->processBlock(
-    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
 
   ASSERT_EQ(bearings_.size(), 1);
   EXPECT_EQ(bearings_[0].base_station_id, 1);
@@ -104,15 +105,19 @@ TEST_F(MeasurementProcessorTest, NoCallbackWhenTimestampDiffTooLarge) {
 
 TEST_F(MeasurementProcessorTest, BufferKeepsOnlyLastTwoBlocks) {
   // Send 3 blocks - buffer should only keep last 2
-  processor_->processBlock(
-    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
-  processor_->processBlock(
-    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
-  processor_->processBlock(
-    createTestSweepBlock(1, 3000, 150000, 150100, 150200, 150300));
+  auto [block1a, block1b] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+  auto [block2a, block2b] = test_helpers::createRealisticSweepBlocks(1, 3000, 4000);
+  auto [block3a, block3b] = test_helpers::createRealisticSweepBlocks(1, 5000, 6000);
 
-  // Should have 2 callbacks: (1,2) and (2,3)
-  ASSERT_EQ(bearings_.size(), 2);
+  processor_->processBlock(block1a);
+  processor_->processBlock(block1b);
+  processor_->processBlock(block2a);
+  processor_->processBlock(block2b);
+  processor_->processBlock(block3a);
+  processor_->processBlock(block3b);
+
+  // Should have 3 callbacks: (1a,1b), (2a,2b), (3a,3b)
+  ASSERT_EQ(bearings_.size(), 3);
 }
 
 TEST_F(MeasurementProcessorTest, DifferentBaseStationsProcessedSeparately) {
@@ -174,29 +179,35 @@ TEST_F(MeasurementProcessorTest, BearingCalculationBasicValues) {
 }
 
 TEST_F(MeasurementProcessorTest, BearingCalculationDifferentSensors) {
-  // Test with different offset values for each sensor
-  processor_->processBlock(
-    createTestSweepBlock(1, 1000, 50000, 60000, 70000, 80000));
-  processor_->processBlock(
-    createTestSweepBlock(1, 2000, 100000, 110000, 120000, 130000));
+  // Test with realistic geometry - sensors have slightly different angles
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
 
   ASSERT_EQ(bearings_.size(), 1);
 
-  // Each sensor should have different angles
+  // With realistic geometry, sensors have slightly different angles
+  // Check that at least some sensors have measurable angle differences
+  bool found_difference = false;
   for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
-    // Azimuth should be different
-    EXPECT_NE(
-      bearings_[0].sensor_angles[i].azimuth,
-      bearings_[0].sensor_angles[0].azimuth);
+    if (std::abs(
+        bearings_[0].sensor_angles[i].azimuth -
+        bearings_[0].sensor_angles[0].azimuth) > 0.001)
+    {
+      found_difference = true;
+      break;
+    }
   }
+  EXPECT_TRUE(found_difference) << "Sensors should have slightly different angles";
 }
 
 TEST_F(MeasurementProcessorTest, BearingValuesInReasonableRange) {
   // Verify that calculated bearings are within reasonable ranges
-  processor_->processBlock(
-    createTestSweepBlock(1, 1000, 50000, 60000, 70000, 80000));
-  processor_->processBlock(
-    createTestSweepBlock(1, 2000, 100000, 110000, 120000, 130000));
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
 
   ASSERT_EQ(bearings_.size(), 1);
 
@@ -214,14 +225,14 @@ TEST_F(MeasurementProcessorTest, BearingValuesInReasonableRange) {
 
 TEST_F(MeasurementProcessorTest, MultipleConsecutiveMeasurements) {
   // Send multiple sweep pairs in sequence
-  for (int i = 0; i < 5; ++i) {
-    processor_->processBlock(
-      createTestSweepBlock(
-        1, 1000 + i * 1000, 50000 + i * 10000, 50100 + i * 10000,
-        50200 + i * 10000, 50300 + i * 10000));
+  for (int i = 0; i < 4; ++i) {
+    auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(
+      1, 1000 + i * 10000, 2000 + i * 10000);
+    processor_->processBlock(block_first);
+    processor_->processBlock(block_second);
   }
 
-  // Should get 4 callbacks (pairs: 0-1, 1-2, 2-3, 3-4)
+  // Should get 4 callbacks (one per pair)
   ASSERT_EQ(bearings_.size(), 4);
 
   // All should be from base station 1
@@ -334,6 +345,93 @@ TEST_F(MeasurementProcessorTest, SpecificBearingAngles10DegMinus30Deg) {
       bearings_[0].sensor_angles[i].elevation,
       bearings_[0].sensor_angles[0].elevation, 0.001);
   }
+}
+
+TEST_F(MeasurementProcessorTest, ValidationPassesWithRealisticGeometry) {
+  // Default geometry should pass all validation checks
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
+
+  ASSERT_EQ(bearings_.size(), 1);
+  EXPECT_EQ(bearings_[0].base_station_id, 1);
+  EXPECT_EQ(bearings_[0].hardware_timestamp, 2000);
+}
+
+TEST_F(MeasurementProcessorTest, ValidationRejectsExcessiveAzimuthSpread) {
+  // Place deck very close (0.3m) and offset to the side to create large azimuth spread
+  // At 0.3m distance, 33.5mm baseline creates ~6.4° spread >> 1.28° limit
+  auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
+    0.0, 0.0, 0.0,      // station at origin
+    0.3, 0.0, 0.0,      // deck 30cm in front (same height)
+    1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
+
+  // Should be rejected due to excessive azimuth spread
+  ASSERT_EQ(bearings_.size(), 0);
+}
+
+TEST_F(MeasurementProcessorTest, ValidationRejectsExcessiveElevationSpread) {
+  // Place deck very close (0.3m) and offset vertically to create large elevation spread
+  // At 0.3m distance, 33.5mm baseline creates ~6.4° spread >> 1.28° limit
+  auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
+    0.0, 0.0, 0.0,      // station at origin
+    0.0, 0.0, -0.3,     // deck 30cm below (no forward offset)
+    1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
+
+  // Should be rejected due to excessive elevation spread
+  ASSERT_EQ(bearings_.size(), 0);
+}
+
+TEST_F(MeasurementProcessorTest, ValidationRejectsCounterclockwiseWinding) {
+  // Place deck 2m in front but above the station (not below)
+  // This creates counter-clockwise winding order
+  auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
+    0.0, 0.0, 0.0,      // station at origin
+    2.0, 0.0, +0.02,    // deck 2m in front, 2cm ABOVE (not below)
+    1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
+
+  // Should be rejected due to wrong winding order
+  ASSERT_EQ(bearings_.size(), 0);
+}
+
+TEST_F(MeasurementProcessorTest, ValidationAcceptsBoundaryAzimuthSpread) {
+  // Place deck at distance where angular spread is just under the limit
+  // At 1.6m: spread = atan(0.0335/1.6) = 1.20° < 1.28° limit
+  auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
+    0.0, 0.0, 0.0,      // station at origin
+    1.6, 0.0, -0.02,    // deck 1.6m in front, 2cm below
+    1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
+
+  // Should pass validation (spread ~1.20° < 1.28°)
+  ASSERT_EQ(bearings_.size(), 1);
+}
+
+TEST_F(MeasurementProcessorTest, ValidationRejectsBoundaryExceedingAzimuthSpread) {
+  // Place deck at distance where angular spread exceeds the limit
+  // At 0.6m with Y-baseline of 15mm: spread = atan(0.015/0.6) = 1.43° > 1.28° limit
+  auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
+    0.0, 0.0, 0.0,      // station at origin
+    0.6, 0.0, -0.02,    // deck 0.6m in front, 2cm below
+    1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
+
+  // Should be rejected (azimuth spread ~1.43° > 1.28°)
+  ASSERT_EQ(bearings_.size(), 0);
 }
 
 }    // namespace lighthouse_protocol_decoder

@@ -23,7 +23,8 @@ namespace lighthouse_protocol_decoder
 SweepProcessor::SweepProcessor(
   SweepCallback callback,
   LoggerInterface::Ptr logger)
-: callback_(std::move(callback)), logger_(std::move(logger)) {}
+: callback_(std::move(callback)),
+  logger_(logger ? std::move(logger) : std::make_shared<NullLogger>()) {}
 
 void SweepProcessor::processFrame(const DataFrameContents & frame)
 {
@@ -89,8 +90,28 @@ bool SweepProcessor::validateSweep() const
     }
   }
 
-  return (valid_npolys == 3) && (valid_offsets == 1) &&
-         (channels_seen.size() == 1);
+  if (valid_npolys != 3) {
+    logger_->debug(
+      "Sweep discarded: expected 3 sensors with valid polynomial, got " +
+      std::to_string(valid_npolys));
+    return false;
+  }
+
+  if (valid_offsets != 1) {
+    logger_->debug(
+      "Sweep discarded: expected exactly 1 sensor with sync offset, got " +
+      std::to_string(valid_offsets));
+    return false;
+  }
+
+  if (channels_seen.size() != 1) {
+    logger_->debug(
+      "Sweep discarded: expected frames from a single base station, got " +
+      std::to_string(channels_seen.size()) + " distinct channels");
+    return false;
+  }
+
+  return true;
 }
 
 SweepBlockRawData SweepProcessor::completeBlockInformation() const

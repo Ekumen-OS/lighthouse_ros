@@ -22,7 +22,8 @@ namespace lighthouse_protocol_decoder
 SyncFrameDecoder::SyncFrameDecoder(
   SyncFrameDetectedCallback sync_callback,
   LoggerInterface::Ptr logger)
-: sync_callback_(std::move(sync_callback)), logger_(std::move(logger)) {}
+: sync_callback_(std::move(sync_callback)),
+  logger_(logger ? std::move(logger) : std::make_shared<NullLogger>()) {}
 
 void SyncFrameDecoder::processByte(std::uint8_t byte)
 {

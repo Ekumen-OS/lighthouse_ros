@@ -36,7 +36,8 @@ std::uint16_t lineToLocalByteOrder(std::uint16_t value)
 }    // namespace
 
 OOTXFrameDecoder::OOTXFrameDecoder(LoggerInterface::Ptr logger)
-: has_decoded_frame_(false), logger_(std::move(logger)) {}
+: has_decoded_frame_(false),
+  logger_(logger ? std::move(logger) : std::make_shared<NullLogger>()) {}
 
 void OOTXFrameDecoder::processSlowBit(bool slow_bit)
 {
@@ -112,14 +113,14 @@ DecodeResult OOTXFrameDecoder::tryDecodeFrame()
     (payload_length + 1) / 2;   // round the payload len up to nearest word
   const std::size_t expected_words = 2 + data_words + 2;
 
-  if (words_count == 2 && logger_) {
-    logger_->info("Preamble detected, waiting for the rest...");
+  if (words_count == 2) {
+    logger_->debug("OOTX preamble detected, accumulating payload...");
   }
 
-  if (logger_) {
+  {
     std::ostringstream oss;
-    oss << "... received " << words_count << " words out of " << expected_words;
-    logger_->info(oss.str());
+    oss << "OOTX progress: " << words_count << " / " << expected_words << " words received";
+    logger_->debug(oss.str());
   }
 
   // Wait until we have all the bits
@@ -164,9 +165,7 @@ DecodeResult OOTXFrameDecoder::tryDecodeFrame()
   const std::uint32_t calculated_crc = calculateCRC32(payload);
 
   if (calculated_crc != transmitted_crc) {
-    if (logger_) {
-      logger_->warning("CRC32 mismatch while trying to decode OOTX frame");
-    }
+    logger_->warning("OOTX frame CRC32 mismatch, discarding frame.");
     return DecodeResult::CrcError;
   }
 
@@ -174,9 +173,7 @@ DecodeResult OOTXFrameDecoder::tryDecodeFrame()
   latest_payload_ = std::move(payload);
   has_decoded_frame_ = true;
 
-  if (logger_) {
-    logger_->info("OOTX corrections package decoded!");
-  }
+  logger_->info("OOTX corrections package successfully decoded.");
 
   return DecodeResult::Decoded;
 }
