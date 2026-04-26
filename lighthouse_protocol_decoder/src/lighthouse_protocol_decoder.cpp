@@ -24,7 +24,7 @@ LighthouseProtocolDecoder::LighthouseProtocolDecoder(
   BearingCallback app_bearing_callback, LoggerInterface::Ptr logger)
 : current_mode_(Mode::SYNC),
   app_bearing_callback_(std::move(app_bearing_callback)),
-  logger_(std::move(logger))
+  logger_(logger ? std::move(logger) : std::make_shared<NullLogger>())
 {
   // Initialize in SYNC mode
   sync_frame_decoder_ = std::make_unique<SyncFrameDecoder>(
@@ -58,9 +58,7 @@ void LighthouseProtocolDecoder::processByte(std::uint8_t byte)
       }
     }
   } catch (const std::exception & e) {
-    if (logger_) {
-      logger_->error(std::string("Exception caught: ") + e.what());
-    }
+    logger_->error("Unhandled exception in byte processing: " + std::string(e.what()));
   }
 }
 
@@ -82,9 +80,7 @@ void LighthouseProtocolDecoder::reset()
 
 void LighthouseProtocolDecoder::syncFrameDetectedCallback()
 {
-  if (logger_) {
-    logger_->info("Sync frame detected, switching into tracking mode...");
-  }
+  logger_->info("Sync frame detected, switching to data mode.");
 
   // Switch to DATA mode
   current_mode_ = Mode::DATA;
@@ -101,7 +97,7 @@ void LighthouseProtocolDecoder::syncFrameDetectedCallback()
 void LighthouseProtocolDecoder::dataframeCallback(
   bool good_sync, const DataFrameContents & frame_data)
 {
-  if (logger_) {
+  {
     std::ostringstream oss;
     oss << "Sensor: " << static_cast<int>(frame_data.sid) << "  TS:" << std::hex
         << std::setw(6) << std::setfill('0') << frame_data.timestamp
@@ -118,9 +114,7 @@ void LighthouseProtocolDecoder::dataframeCallback(
   }
 
   if (!good_sync) {
-    if (logger_) {
-      logger_->warning("Frame sync lost, switching back to sync mode...");
-    }
+    logger_->warning("Frame boundary lost, switching back to sync mode.");
 
     // Switch back to SYNC mode
     current_mode_ = Mode::SYNC;
@@ -143,11 +137,9 @@ void LighthouseProtocolDecoder::dataframeCallback(
 
       // Create OOTX decoder for this base station if needed
       if (!ootx_decoders_[bs_id]) {
-        if (logger_) {
-          logger_->info(
-            "Creating new OOTX decoder for basestation " +
-            std::to_string(bs_id));
-        }
+        logger_->info(
+          "New base station detected on channel " + std::to_string(
+            bs_id) + ", starting OOTX decoding.");
         ootx_decoders_[bs_id] = std::make_unique<OOTXFrameDecoder>(logger_);
         prev_timestamp0_[bs_id] = timestamp0;
       }
@@ -176,21 +168,18 @@ void LighthouseProtocolDecoder::sweepCallback(
 void LighthouseProtocolDecoder::measurementCallback(
   const SweepBlockBearings & sensor_bearings)
 {
-  if (logger_) {
-    logger_->debug(
-      "Channel: " +
-      std::to_string(sensor_bearings.base_station_id));
-    logger_->debug(
-      "HW Timestamp: " +
-      std::to_string(sensor_bearings.hardware_timestamp));
+  logger_->debug(
+    "Bearing measurement ready — channel: " +
+    std::to_string(sensor_bearings.base_station_id) +
+    ", hw_ts: " +
+    std::to_string(sensor_bearings.hardware_timestamp));
 
-    for (std::size_t i = 0; i < kPulseProcessorNSensors; ++i) {
-      std::ostringstream oss;
-      oss << "Sensor " << i << " Azimuth: " << std::fixed
-          << std::setprecision(2) << sensor_bearings.sensor_angles[i].azimuth
-          << " Elevation: " << sensor_bearings.sensor_angles[i].elevation;
-      logger_->debug(oss.str());
-    }
+  for (std::size_t i = 0; i < kPulseProcessorNSensors; ++i) {
+    std::ostringstream oss;
+    oss << "Sensor " << i << " Azimuth: " << std::fixed
+        << std::setprecision(2) << sensor_bearings.sensor_angles[i].azimuth
+        << " Elevation: " << sensor_bearings.sensor_angles[i].elevation;
+    logger_->debug(oss.str());
   }
 
   // Forward to application callback if provided

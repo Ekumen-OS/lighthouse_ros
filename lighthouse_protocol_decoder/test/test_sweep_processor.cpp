@@ -23,6 +23,7 @@ namespace lighthouse_protocol_decoder
 {
 
 using test_helpers::createDataFrameContents;
+using test_helpers::StdoutLogger;
 
 // Alias for backward compatibility with existing test code
 inline DataFrameContents createTestFrame(
@@ -42,7 +43,7 @@ protected:
 
     processor_ = std::make_unique<SweepProcessor>(
       [this](const SweepBlockRawData & sweep) {sweeps_.push_back(sweep);},
-      nullptr);
+      std::make_shared<StdoutLogger>());
   }
 
   std::unique_ptr<SweepProcessor> processor_;

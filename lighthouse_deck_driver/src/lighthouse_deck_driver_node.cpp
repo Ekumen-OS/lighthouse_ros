@@ -204,7 +204,7 @@ void LighthouseDeckDriverNode::bearingCallback(
 
   RCLCPP_INFO_THROTTLE(
     get_logger(), *get_clock(), 1000,
-    "Publishing bearing measurements published: %d",
+    "Bearing measurements published: %d",
     measurements_count);
 
   auto msg = lighthouse_deck_msgs::msg::LighthouseDeckMeasurement();

@@ -24,7 +24,7 @@ DataFrameDecoder::DataFrameDecoder(
   DataFrameCallback data_callback,
   LoggerInterface::Ptr logger)
 : good_sync_(true), data_callback_(std::move(data_callback)),
-  logger_(std::move(logger))
+  logger_(logger ? std::move(logger) : std::make_shared<NullLogger>())
 {
   frame_buffer_.reserve(12);
 }
@@ -41,15 +41,15 @@ void DataFrameDecoder::processByte(std::uint8_t byte)
       frame_buffer_.end(),                         //
       [](std::uint8_t b) {return b == 0xFF;});     //
 
-    if (!is_sync) {
+    if (is_sync) {
+      logger_->debug("Periodic sync frame received, ignoring.");
+    } else {
       // Decode the data frame
       DataFrameContents frame_data = decodeFrame(frame_buffer_);
 
       // Validate padding fields
       if (frame_data.padding_1 != 0 || frame_data.padding_2 != 0) {
-        if (logger_) {
-          logger_->warning("Error: Bad padding value, resetting sync...");
-        }
+        logger_->warning("Bad frame padding, frame boundary lost — waiting for next sync.");
         good_sync_ = false;
       }
 

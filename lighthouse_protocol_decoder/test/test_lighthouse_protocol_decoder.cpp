@@ -31,6 +31,7 @@ using test_helpers::createDataFrame;
 using test_helpers::createInterleavedMeasurements;
 using test_helpers::createSyncFrame;
 using test_helpers::makeNpoly;
+using test_helpers::StdoutLogger;
 
 // ===========================================================================
 // Test Fixture
@@ -47,7 +48,7 @@ protected:
       [this](const SweepBlockBearings & bearings) {
         received_bearings_.push_back(bearings);
       },
-      nullptr);
+      std::make_shared<StdoutLogger>());
   }
 
   /// Send bytes to the decoder
