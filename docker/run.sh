@@ -72,3 +72,4 @@ done
 [[ "$BUILD" = true ]] && docker compose build lighthouse_ros-dev
 
 USERID=$(id -u) GROUPID=$(id -g) docker compose run --rm lighthouse_ros-dev "${DOCKER_CMD[@]}"
+exit $?

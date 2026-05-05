@@ -27,4 +27,4 @@ jobs:
       run: ./docker/run.sh --build -- true
 
     - name: Run unit tests
-      run: ./docker/run.sh --build -- bash -c 'rm -rf build/* install/* && ls -l build/ && colcon build && colcon test'
+      run: ./docker/run.sh --build -- bash -c 'rm -rf build/* install/* && colcon build && colcon test && colcon test-result --all'
