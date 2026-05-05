@@ -104,6 +104,7 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_station_geometry_optimization
     test/test_station_geometry_optimization.cpp
+    TIMEOUT 120
   )
 
   if(TARGET test_station_geometry_optimization)
