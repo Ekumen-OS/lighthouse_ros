@@ -210,15 +210,22 @@ MeasurementProcessor::calculatePolarBearing(
   double phase_beam_0,
   double phase_beam_1) const
 {
-  // Calculate azimuth
-  const auto azimuth = ((phase_beam_0 + phase_beam_1) / 2.0) - M_PI;
+  // Calculate V2 angles with rotor tilt corrections
+  // V2 base stations have rotating light planes tilted at ±60° (±π/3)
+  const auto v2_angle_1 = phase_beam_0 - M_PI + M_PI / 3.0;  // +60° tilt
+  const auto v2_angle_2 = phase_beam_1 - M_PI - M_PI / 3.0;  // -60° tilt
 
-  // Calculate elevation
-  const auto p = M_PI / 3.0;  // 60 degrees in radians
-  const auto beta =
-    (phase_beam_1 - phase_beam_0) - (2.0 * M_PI / 3.0);   // 120 degrees
+  // Calculate azimuth (horizontal angle)
+  // The rotor tilt corrections cancel out in the average
+  const auto azimuth = (v2_angle_1 + v2_angle_2) / 2.0;
 
-  const auto elevation = std::atan(std::sin(beta / 2.0) / std::tan(p / 2.0));
+  // Calculate elevation (vertical angle) using plane intersection formula
+  // This is the correct geometric formula from Crazyflie firmware
+  const auto tant = std::tan(M_PI / 6.0);  // tan(30°)
+  const auto elevation = std::atan2(
+    std::sin(v2_angle_2 - v2_angle_1),
+    tant * (std::cos(v2_angle_1) + std::cos(v2_angle_2))
+  );
 
   return {azimuth, elevation};
 }

@@ -26,6 +26,45 @@ namespace lighthouse_protocol_decoder
 using test_helpers::createSweepBlockRawData;
 using test_helpers::StdoutLogger;
 
+// Helper function to convert desired bearing angles to timing offsets
+// This is the exact mathematical inverse of the angle calculation formula
+std::pair<std::uint32_t, std::uint32_t>
+anglesToOffsets(double angleH_deg, double angleV_deg)
+{
+  // Use channel 0 period as reference
+  constexpr std::uint32_t kPeriod = 479500;
+
+  // Convert to radians
+  const double angleH = angleH_deg * M_PI / 180.0;
+  const double angleV = angleV_deg * M_PI / 180.0;
+
+  // Invert the elevation formula to find the half-difference of V2 angles
+  // From: angleV = atan2(sin(2d), tan(π/6) * 2 * cos(angleH) * cos(d))
+  // We can derive: sin(d) = tan(angleV) * tan(π/6) * cos(angleH)
+  // where d = (v2_angle_2 - v2_angle_1) / 2
+  const double tant = std::tan(M_PI / 6.0);
+  const double d = std::asin(std::tan(angleV) * tant * std::cos(angleH));
+
+  // Calculate V2 angles from angleH and the half-difference
+  // v2_angle_1 = angleH - d
+  // v2_angle_2 = angleH + d
+  const double v2_angle_1 = angleH - d;
+  const double v2_angle_2 = angleH + d;
+
+  // Calculate phases from V2 angles (inverse of the decoder formula)
+  // phase_0 = v2_angle_1 + π - π/3
+  // phase_1 = v2_angle_2 + π + π/3
+  const double phase_0 = v2_angle_1 + M_PI - M_PI / 3.0;
+  const double phase_1 = v2_angle_2 + M_PI + M_PI / 3.0;
+
+  // Convert phases to timing offsets
+  // offset = (phase / 2π) × period
+  const auto offset_0 = static_cast<std::uint32_t>((phase_0 / (2.0 * M_PI)) * kPeriod);
+  const auto offset_1 = static_cast<std::uint32_t>((phase_1 / (2.0 * M_PI)) * kPeriod);
+
+  return {offset_0, offset_1};
+}
+
 // Alias for backward compatibility with existing test code
 inline SweepBlockRawData
 createTestSweepBlock(
@@ -122,14 +161,13 @@ TEST_F(MeasurementProcessorTest, BufferKeepsOnlyLastTwoBlocks) {
 
 TEST_F(MeasurementProcessorTest, DifferentBaseStationsProcessedSeparately) {
   // Send blocks from two different base stations
-  processor_->processBlock(
-    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
-  processor_->processBlock(
-    createTestSweepBlock(2, 1100, 50000, 50100, 50200, 50300));
-  processor_->processBlock(
-    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
-  processor_->processBlock(
-    createTestSweepBlock(2, 2100, 100000, 100100, 100200, 100300));
+  auto [block1a, block1b] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+  auto [block2a, block2b] = test_helpers::createRealisticSweepBlocks(2, 1100, 2100);
+
+  processor_->processBlock(block1a);
+  processor_->processBlock(block2a);
+  processor_->processBlock(block1b);
+  processor_->processBlock(block2b);
 
   // Should have 2 callbacks, one for each base station
   ASSERT_EQ(bearings_.size(), 2);
@@ -243,10 +281,10 @@ TEST_F(MeasurementProcessorTest, MultipleConsecutiveMeasurements) {
 
 TEST_F(MeasurementProcessorTest, TimestampAssignment) {
   // Verify that hardware_timestamp is set to the current block's timestamp
-  processor_->processBlock(
-    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
-  processor_->processBlock(
-    createTestSweepBlock(1, 2000, 100000, 100100, 100200, 100300));
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+
+  processor_->processBlock(block_first);
+  processor_->processBlock(block_second);
 
   ASSERT_EQ(bearings_.size(), 1);
   EXPECT_EQ(bearings_[0].hardware_timestamp, 2000);
@@ -311,40 +349,6 @@ TEST_F(MeasurementProcessorTest, NonMatchingPairSkipped) {
   // Should get callback for pair (2, 3)
   ASSERT_EQ(bearings_.size(), 1);
   EXPECT_EQ(bearings_[0].hardware_timestamp, 3000);
-}
-
-TEST_F(MeasurementProcessorTest, SpecificBearingAngles10DegMinus30Deg) {
-  // Test case with specific target bearings: azimuth = 10°, elevation = 30°
-  // Offsets calculated using the corrected formula: atan(sin(beta/2) /
-  // tan(p/2))
-
-  const std::uint32_t offset_0_first = 147218;  // phase0 = 1.929 rad
-  const std::uint32_t offset_1_first = 358920;  // phase1 = 4.703 rad
-
-  processor_->processBlock(
-    createTestSweepBlock(
-      1, 1000, offset_0_first, offset_0_first, offset_0_first, offset_0_first));
-  processor_->processBlock(
-    createTestSweepBlock(
-      1, 2000, offset_1_first, offset_1_first, offset_1_first, offset_1_first));
-
-  ASSERT_EQ(bearings_.size(), 1);
-
-  // Check azimuth is approximately 10 degrees
-  EXPECT_NEAR(bearings_[0].sensor_angles[0].azimuth, 10.0, 1.0);
-
-  // Check elevation is approximately 30 degrees
-  EXPECT_NEAR(bearings_[0].sensor_angles[0].elevation, 30.0, 1.0);
-
-  // All sensors should have the same angles since they have the same offsets
-  for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
-    EXPECT_NEAR(
-      bearings_[0].sensor_angles[i].azimuth,
-      bearings_[0].sensor_angles[0].azimuth, 0.001);
-    EXPECT_NEAR(
-      bearings_[0].sensor_angles[i].elevation,
-      bearings_[0].sensor_angles[0].elevation, 0.001);
-  }
 }
 
 TEST_F(MeasurementProcessorTest, ValidationPassesWithRealisticGeometry) {
@@ -432,6 +436,143 @@ TEST_F(MeasurementProcessorTest, ValidationRejectsBoundaryExceedingAzimuthSpread
 
   // Should be rejected (azimuth spread ~1.43° > 1.28°)
   ASSERT_EQ(bearings_.size(), 0);
+}
+
+// ============================================================================
+// Angle Calculation Formula Validation Tests (Parameterized)
+// ============================================================================
+// These tests verify the correct V2 angle calculation formula is used.
+// Reference: Crazyflie firmware pulse_processor_v2.c calculateAngles() and
+// pulseProcessorV2ConvertToV1Angles()
+//
+// The correct formula accounts for the ±60° rotor tilt in V2 base stations:
+//   v2_angle_1 = phase_0 - π + π/3
+//   v2_angle_2 = phase_1 - π - π/3
+//   azimuth = (v2_angle_1 + v2_angle_2) / 2
+//   elevation = atan2(sin(v2_angle_2 - v2_angle_1),
+//                     tan(π/6) * (cos(v2_angle_1) + cos(v2_angle_2)))
+
+struct AngleTestCase
+{
+  double angleH_deg;
+  double angleV_deg;
+  double tolerance_deg;
+  std::string description;
+};
+
+class AngleFormulaTest : public MeasurementProcessorTest,
+  public ::testing::WithParamInterface<AngleTestCase>
+{
+};
+
+TEST_P(AngleFormulaTest, CorrectAngleCalculation) {
+  const auto & test_case = GetParam();
+
+  // Convert desired angles to offsets using the exact inverse formula
+  const auto [offset_0, offset_1] = anglesToOffsets(test_case.angleH_deg, test_case.angleV_deg);
+
+  // Send two blocks with calculated offsets
+  processor_->processBlock(
+    createTestSweepBlock(1, 1000, offset_0, offset_0, offset_0, offset_0));
+  processor_->processBlock(
+    createTestSweepBlock(1, 2000, offset_1, offset_1, offset_1, offset_1));
+
+  ASSERT_EQ(bearings_.size(), 1) << "Failed for: " << test_case.description;
+
+  // Check angleH (azimuth)
+  EXPECT_NEAR(
+    bearings_[0].sensor_angles[0].azimuth, test_case.angleH_deg,
+    test_case.tolerance_deg)
+    << "AngleH mismatch for: " << test_case.description;
+
+  // Check angleV (elevation)
+  EXPECT_NEAR(
+    bearings_[0].sensor_angles[0].elevation, test_case.angleV_deg,
+    test_case.tolerance_deg)
+    << "AngleV mismatch for: " << test_case.description;
+
+  // All sensors should have the same angles since they have the same offsets
+  for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
+    EXPECT_NEAR(
+      bearings_[0].sensor_angles[i].azimuth,
+      bearings_[0].sensor_angles[0].azimuth, 0.001)
+      << "Sensor " << i << " azimuth differs for: " << test_case.description;
+    EXPECT_NEAR(
+      bearings_[0].sensor_angles[i].elevation,
+      bearings_[0].sensor_angles[0].elevation, 0.001)
+      << "Sensor " << i << " elevation differs for: " << test_case.description;
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+  AngleCalculationTests,
+  AngleFormulaTest,
+  ::testing::Values(
+    // Basic center point
+    AngleTestCase{0.0, 0.0, 0.5, "Zero bearing (origin)"},
+
+    // Pure azimuth variations (angleH, angleV=0)
+    AngleTestCase{30.0, 0.0, 0.5, "Positive azimuth, zero elevation"},
+    AngleTestCase{-30.0, 0.0, 0.5, "Negative azimuth, zero elevation"},
+    AngleTestCase{45.0, 0.0, 0.5, "Large positive azimuth"},
+    AngleTestCase{-45.0, 0.0, 0.5, "Large negative azimuth"},
+
+    // Pure elevation variations (angleH=0, angleV) - critical tests!
+    AngleTestCase{0.0, 30.0, 0.5, "Zero azimuth, positive elevation"},
+    AngleTestCase{0.0, -30.0, 0.5, "Zero azimuth, negative elevation"},
+    AngleTestCase{0.0, 50.0, 0.5, "Large positive elevation"},
+    AngleTestCase{0.0, -50.0, 0.5, "Large negative elevation"},
+
+    // Combined angle variations
+    AngleTestCase{10.0, 30.0, 0.5, "Both angles positive (original test case)"},
+    AngleTestCase{20.0, 20.0, 0.5, "Both angles positive equal"},
+    AngleTestCase{-20.0, -20.0, 0.5, "Both angles negative"},
+    AngleTestCase{20.0, -20.0, 0.5, "Positive azimuth, negative elevation"},
+    AngleTestCase{-20.0, 20.0, 0.5, "Negative azimuth, positive elevation"},
+
+    // Extreme angles
+    AngleTestCase{45.0, 40.0, 0.5, "Extreme angles combination"},
+    AngleTestCase{-60.0, 30.0, 0.5, "Large negative azimuth, positive elevation"},
+    AngleTestCase{60.0, -30.0, 0.5, "Large positive azimuth, negative elevation"},
+
+    // Symmetry verification
+    AngleTestCase{0.0, 25.0, 0.5, "Symmetry test: +25° elevation"},
+    AngleTestCase{0.0, -25.0, 0.5, "Symmetry test: -25° elevation"},
+    AngleTestCase{15.0, 0.0, 0.5, "Symmetry test: +15° azimuth"},
+    AngleTestCase{-15.0, 0.0, 0.5, "Symmetry test: -15° azimuth"}
+  )
+);
+
+// Keep the original SpecificBearingAngles test that validates against
+// manually-calculated offsets for backwards compatibility
+TEST_F(MeasurementProcessorTest, SpecificBearingAngles10DegMinus30Deg) {
+  // Test case with specific target bearings: angleH = 10°, angleV = 30°
+  // Offsets were empirically determined to produce these angles
+  const std::uint32_t offset_0 = 147218;
+  const std::uint32_t offset_1 = 358920;
+
+  processor_->processBlock(
+    createTestSweepBlock(1, 1000, offset_0, offset_0, offset_0, offset_0));
+  processor_->processBlock(
+    createTestSweepBlock(1, 2000, offset_1, offset_1, offset_1, offset_1));
+
+  ASSERT_EQ(bearings_.size(), 1);
+
+  // Check azimuth is approximately 10 degrees
+  EXPECT_NEAR(bearings_[0].sensor_angles[0].azimuth, 10.0, 1.0);
+
+  // Check elevation is approximately 30 degrees
+  EXPECT_NEAR(bearings_[0].sensor_angles[0].elevation, 30.0, 1.0);
+
+  // All sensors should have the same angles since they have the same offsets
+  for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
+    EXPECT_NEAR(
+      bearings_[0].sensor_angles[i].azimuth,
+      bearings_[0].sensor_angles[0].azimuth, 0.001);
+    EXPECT_NEAR(
+      bearings_[0].sensor_angles[i].elevation,
+      bearings_[0].sensor_angles[0].elevation, 0.001);
+  }
 }
 
 }    // namespace lighthouse_protocol_decoder
