@@ -29,7 +29,7 @@ def generate_launch_description():
                     "only_driver.launch.py",
                 ]
             )
-        )
+        ),
     )
 
     mapper_launch = IncludeLaunchDescription(
@@ -41,7 +41,12 @@ def generate_launch_description():
                     "only_mapper.launch.py",
                 ]
             )
-        )
+        ),
     )
 
-    return LaunchDescription([driver_launch, mapper_launch])
+    return LaunchDescription(
+        [
+            driver_launch,
+            mapper_launch,
+        ]
+    )
