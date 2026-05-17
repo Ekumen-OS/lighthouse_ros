@@ -13,14 +13,24 @@
 # limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import RegisterEventHandler, Shutdown
+from launch.actions import DeclareLaunchArgument, RegisterEventHandler, Shutdown
+from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch_ros.actions import Node
-from launch.substitutions import PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
+    use_rviz_arg, use_rviz_conf = (
+        DeclareLaunchArgument(
+            "use_rviz",
+            default_value="false",
+            description="Whether to launch RViz2 for visualization",
+        ),
+        LaunchConfiguration("use_rviz"),
+    )
+
     rviz_config = PathJoinSubstitution(
         [FindPackageShare("lighthouse_station_mapper"), "rviz", "config.rviz"]
     )
@@ -30,6 +40,7 @@ def generate_launch_description():
         executable="rviz2",
         output="screen",
         arguments=["-d", rviz_config],
+        condition=IfCondition(use_rviz_conf),
     )
 
     mapper_node = Node(
@@ -38,7 +49,7 @@ def generate_launch_description():
         output="screen",
         executable="mapper_ui",
         arguments=["--ros-args", "--log-level", "INFO"],
-        prefix="xterm -e",
+        prefix="xterm -fa 'Monospace' -fs 14 -e",
     )
 
     # Shutdown launch when mapper node exits
@@ -51,6 +62,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            use_rviz_arg,
             mapper_node,
             rviz_node,
             shutdown_on_mapper_exit,
