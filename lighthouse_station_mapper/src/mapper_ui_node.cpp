@@ -95,68 +95,60 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
 
   // The renderer runs its event loop on a background thread. Instead of
   // calling node methods directly (which would race with the ROS executor),
-  // each callback locks node_mutex_ just long enough to enqueue a command.
-  // The timer callback drains command_queue_ on the ROS thread.
+  // each callback enqueues a command using the thread-safe command queue.
+  // The timer callback processes the queue on the ROS thread.
   renderer_->set_sample_callback(
     [this] {
-      std::lock_guard<std::mutex> lock(node_mutex_);
-      command_queue_.push(
+      command_queue_.enqueue(
         [this] {
           on_sample_button_callback();
         });
     });
   renderer_->set_solve_callback(
     [this] {
-      std::lock_guard<std::mutex> lock(node_mutex_);
-      command_queue_.push(
+      command_queue_.enqueue(
         [this] {
           on_solve_button_callback();
         });
     });
   renderer_->set_solve_keypoint_callback(
     [this] {
-      std::lock_guard<std::mutex> lock(node_mutex_);
-      command_queue_.push(
+      command_queue_.enqueue(
         [this] {
           on_solve_keypoint_button_callback();
         });
     });
   renderer_->set_save_callback(
     [this] {
-      std::lock_guard<std::mutex> lock(node_mutex_);
-      command_queue_.push(
+      command_queue_.enqueue(
         [this] {
           on_save_button_callback();
         });
     });
   renderer_->set_clear_samples_callback(
     [this] {
-      std::lock_guard<std::mutex> lock(node_mutex_);
-      command_queue_.push(
+      command_queue_.enqueue(
         [this] {
           on_clear_samples_button_callback();
         });
     });
   renderer_->set_set_keypoint_callback(
     [this] {
-      std::lock_guard<std::mutex> lock(node_mutex_);
-      command_queue_.push(
+      command_queue_.enqueue(
         [this] {
           on_set_keypoint_button_callback();
         });
     });
   renderer_->set_clear_origin_keypoints_callback(
     [this] {
-      std::lock_guard<std::mutex> lock(node_mutex_);
-      command_queue_.push(
+      command_queue_.enqueue(
         [this] {
           on_clear_origin_keypoints_button_callback();
         });
     });
   renderer_->set_quit_callback(
     [this] {
-      std::lock_guard<std::mutex> lock(node_mutex_);
-      command_queue_.push(
+      command_queue_.enqueue(
         [this] {
           on_quit_button_callback();
         });
@@ -177,7 +169,6 @@ bool MapperUiNode::is_quit_requested() const
 
 void MapperUiNode::lighthouse_callback(const LighthouseDeckMeasurement::SharedPtr msg)
 {
-  std::lock_guard<std::mutex> lock(node_mutex_);
   const rclcpp::Time timestamp{msg->header.stamp};
   const std::size_t n = msg->station_id.size();
   for (std::size_t i = 0; i < n; ++i) {
@@ -198,14 +189,10 @@ void MapperUiNode::lighthouse_callback(const LighthouseDeckMeasurement::SharedPt
 
 void MapperUiNode::process_command_queue()
 {
-  std::lock_guard<std::mutex> lock(node_mutex_);
   prune_old_samples();
 
-  while (!command_queue_.empty()) {
-    command_queue_.front()();
-    command_queue_.pop();
-  }
-
+  // Process all queued commands from the UI thread
+  command_queue_.process();
 }
 
 void MapperUiNode::timer_callback()
