@@ -40,21 +40,45 @@
 namespace lighthouse_station_mapper
 {
 
-/// ROS 2 node that provides a terminal UI for interactively mapping
-/// lighthouse base-station geometry. It subscribes to raw lighthouse
-/// measurements, buffers them, and lets the user take samples, solve
-/// for station poses, and save results via an FTXUI-based interface.
+/**
+ * @brief ROS 2 node that provides a terminal UI for interactively mapping lighthouse base-station geometry.
+ *
+ * This node subscribes to raw lighthouse measurements, buffers them in a sliding time window,
+ * and provides an FTXUI-based terminal interface for interactive station mapping. Users can
+ * take samples at different deck positions, solve for station poses using optimization,
+ * visualize results in RViz, and save the calibrated geometry.
+ *
+ * The node manages communication between the ROS 2 executor thread and the FTXUI renderer
+ * thread using a command queue pattern.
+ */
 class MapperUiNode : public rclcpp::Node
 {
 public:
+  /**
+   * @brief Construct a new MapperUiNode.
+   *
+   * Initializes the node, loads parameters, creates subscriptions and publishers,
+   * sets up timers, and starts the FTXUI renderer.
+   *
+   * @param options ROS 2 node options for configuration.
+   */
   explicit MapperUiNode(const rclcpp::NodeOptions & options);
 
-  /// Stops the FTXUI screen renderer. Must be called before destruction
-  /// to cleanly join the renderer background thread.
+  /**
+   * @brief Stop the FTXUI screen renderer.
+   *
+   * Must be called before destruction to cleanly join the renderer background thread.
+   * Safe to call multiple times.
+   */
   void stop_renderer();
 
-  /// Returns true if the user has pressed the Quit button.
-  /// @return True if quit was requested, false otherwise.
+  /**
+   * @brief Check if the user has pressed the Quit button.
+   *
+   * Thread-safe atomic read.
+   *
+   * @return True if quit was requested, false otherwise.
+   */
   bool is_quit_requested() const;
 
 private:
@@ -98,25 +122,53 @@ private:
   void lighthouse_callback(
     const lighthouse_deck_msgs::msg::LighthouseDeckMeasurement::SharedPtr msg);
 
-  /// Timer callback. Drains command_queue_ on the ROS thread
-  /// and refreshes the visible-stations table in the UI.
+  /**
+   * @brief Timer callback that drains command_queue_ and refreshes the UI.
+   *
+   * Runs on the ROS executor thread. Processes all queued commands from the renderer
+   * thread, then updates the visible-stations table in the UI.
+   */
   void timer_callback();
 
-  /// Visualization timer callback (1 Hz). Solves deck poses for all stored
-  /// samples and broadcasts markers and TF transforms.
+  /**
+   * @brief Process the command queue and update UI state.
+   *
+   * Acquires node_mutex_, drains command_queue_, processes pending commands,
+   * summarizes the buffer, updates UI state, and solves deck pose if geometry is available.
+   * This is the main processing function called by timer_callback().
+   */
+  void process_command_queue();
+
+  /**
+   * @brief Visualization timer callback (1 Hz).
+   *
+   * Re-solves deck poses for all stored samples using the latest station geometry,
+   * then broadcasts visualization markers and TF transforms for RViz.
+   */
   void visualization_timer_callback();
 
-  /// Handler for the Sample button. Summarizes the current buffer,
-  /// assigns a common deck_pose_id to all visible stations, and
-  /// appends them to samples_taken_.
+  /**
+   * @brief Handler for the Sample button.
+   *
+   * Summarizes the current buffer, assigns a common deck_pose_id to all visible stations,
+   * and appends them to samples_taken_. Only proceeds if sampling conditions are met.
+   */
   void on_sample_button_callback();
 
-  /// Handler for the Solve button. Runs StationGeometryOptimization
-  /// on samples_taken_ and pushes results to the UI.
+  /**
+   * @brief Handler for the Solve button.
+   *
+   * Runs StationGeometryOptimization on samples_taken_ and pushes results to the UI.
+   * Uses the first station pose as the origin.
+   */
   void on_solve_button_callback();
 
-  /// Handler for the Solve (origin @keypoint) button. Runs StationGeometryOptimization
-  /// on samples_taken_ using keypoints as reference frame, and pushes results to the UI.
+  /**
+   * @brief Handler for the Solve (origin @keypoint) button.
+   *
+   * Runs StationGeometryOptimization on samples_taken_ using keypoints as reference frame,
+   * and pushes results to the UI. Requires exactly 3 keypoints to be set.
+   */
   void on_solve_keypoint_button_callback();
 
   /**
@@ -126,22 +178,41 @@ private:
    */
   void solve_impl(bool use_keypoints);
 
-  /// Handler for the Save button. Persists results to disk (not yet
-  /// implemented).
+  /**
+   * @brief Handler for the Save button.
+   *
+   * Persists optimization results to disk. Not yet implemented.
+   */
   void on_save_button_callback();
 
-  /// Handler for the Clear Samples button. Resets sample_queue_,
-  /// samples_taken_, station_geometry_result_, and next_deck_pose_id_.
+  /**
+   * @brief Handler for the Clear Samples button.
+   *
+   * Resets all collected data: sample_queue_, samples_taken_, station_geometry_result_,
+   * and next_deck_pose_id_.
+   */
   void on_clear_samples_button_callback();
 
-  /// Handler for the Set keypoint button. Records the current deck pose
-  /// as a keypoint (not yet implemented).
+  /**
+   * @brief Handler for the Set keypoint button.
+   *
+   * Records the current deck pose as a keypoint for coordinate frame definition.
+   * Allows up to 3 keypoints to be stored.
+   */
   void on_set_keypoint_button_callback();
 
-  /// Handler for the Clear origin keypoints button. Clears all stored keypoints.
+  /**
+   * @brief Handler for the Clear origin keypoints button.
+   *
+   * Clears all stored keypoints.
+   */
   void on_clear_origin_keypoints_button_callback();
 
-  /// Handler for the Quit button. Sets quit_requested_ to true.
+  /**
+   * @brief Handler for the Quit button.
+   *
+   * Sets quit_requested_ to true, signaling the application to terminate.
+   */
   void on_quit_button_callback();
 
   /**
@@ -178,23 +249,24 @@ private:
 
   /**
    * @brief Compute reference frame transformation from keypoints.
+   *
    * If 3 keypoints are set: origin at keypoint[0], X axis toward keypoint[1],
    * Z axis perpendicular to the plane defined by the 3 points.
    * If no keypoints: uses first station pose as origin.
-   * Caller must hold node_mutex_.
+   *
    * @return T_world_ref: pose of the reference frame in world coordinates.
    */
   Sophus::SE3d compute_keypoint_origin_in_current_frame() const;
 
-  /// Removes entries from sample_queue_ older than buffer_duration_.
-  /// Caller must hold node_mutex_.
+  /**
+   * @brief Remove entries from sample_queue_ older than buffer_duration_.
+   */
   void prune_old_samples();
 
   /**
    * @brief Consume the current sample buffer and return one
    * SummarizedStationData per station, built from the median
    * azimuth/elevation values across all buffered readings.
-   * Caller must hold node_mutex_.
    * @return Vector of summarized station data, one per visible station.
    */
   std::vector<SummarizedStationData> summarize_buffer();
@@ -204,7 +276,6 @@ private:
    * Returns a (ready, message) tuple: ready is true when all stations
    * meet the minimum sample count and angular spread requirements;
    * message explains the result.
-   * Caller must hold node_mutex_.
    * @param samples Summarized station data to check.
    * @return Tuple of (ready flag, status message).
    */
@@ -213,7 +284,6 @@ private:
 
   /**
    * @brief Generates and returns a unique deck pose ID.
-   * Caller must hold node_mutex_.
    * @return Unique deck pose identifier.
    */
   DeckPoseId get_next_deck_pose_id();

@@ -196,7 +196,7 @@ void MapperUiNode::lighthouse_callback(const LighthouseDeckMeasurement::SharedPt
   prune_old_samples();
 }
 
-void MapperUiNode::timer_callback()
+void MapperUiNode::process_command_queue()
 {
   std::lock_guard<std::mutex> lock(node_mutex_);
   prune_old_samples();
@@ -205,6 +205,14 @@ void MapperUiNode::timer_callback()
     command_queue_.front()();
     command_queue_.pop();
   }
+
+}
+
+void MapperUiNode::timer_callback()
+{
+  prune_old_samples();
+
+  process_command_queue();
 
   const auto summarized_samples = summarize_buffer();
   renderer_->set_visible_stations(summarized_samples);
@@ -638,7 +646,6 @@ void MapperUiNode::on_quit_button_callback()
 
 void MapperUiNode::visualization_timer_callback()
 {
-  std::lock_guard<std::mutex> lock(node_mutex_);
   if (!station_geometry_result_.has_value()) {
     return;
   }

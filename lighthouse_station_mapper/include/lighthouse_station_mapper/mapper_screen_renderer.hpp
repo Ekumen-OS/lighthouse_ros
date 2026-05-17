@@ -35,24 +35,61 @@
 namespace lighthouse_station_mapper
 {
 
-/// Owns the FTXUI screen and all interactive components.
-/// Call start() to launch the interactive loop in a background thread.
-/// Call printFrame() for a one-shot static render without starting the loop.
+/**
+ * @brief Main runner of the terminal-based user interface for the lighthouse station mapper.
+ *
+ * This class manages the interactive UI built on FTXUI.
+ * It owns and controls the background thread that drives user interactions and screen rendering.
+ * The UI displays real-time information about visible stations, collected samples, optimization
+ * solutions, and deck pose estimates, while providing interactive buttons for controlling the
+ * mapping workflow.
+ *
+ * Communication with the ROS application is achieved through callback functions that can be
+ * registered for each interactive button (Sample, Solve, Save, etc.). When a user presses a
+ * button in the UI, the corresponding callback is invoked, allowing the ROS node to respond
+ * to user actions. Data flows from ROS to the UI through thread-safe setter methods
+ * (set_visible_stations(), set_current_samples(), etc.).
+ *
+ * All public setter methods are thread-safe and can be called from ROS callbacks.
+ * The internal data is protected by a mutex to prevent race conditions between the UI render
+ * thread and ROS callback threads.
+ */
 class MapperScreenRenderer
 {
 public:
+  /**
+   * @brief Construct a new MapperScreenRenderer.
+   *
+   * Initializes the FTXUI screen and interactive components. The screen loop
+   * is not started until start() is called.
+   */
   MapperScreenRenderer();
+
+  /**
+   * @brief Destroy the MapperScreenRenderer.
+   *
+   * Automatically stops the screen loop if it is running and joins the background thread.
+   */
   ~MapperScreenRenderer();
 
   /// Non-copyable, non-movable (screen and thread cannot be relocated).
   MapperScreenRenderer(const MapperScreenRenderer &) = delete;
   MapperScreenRenderer & operator=(const MapperScreenRenderer &) = delete;
 
-  /// Start the interactive screen loop in a background thread.
+  /**
+   * @brief Start the interactive screen loop in a background thread.
+   *
+   * Launches the FTXUI event loop in a dedicated thread. This method returns immediately
+   * after starting the thread. Thread-safe.
+   */
   void start();
 
-  /// Stop the interactive screen loop and join the background thread.
-  /// Safe to call if start() was never called, or after stop() already ran.
+  /**
+   * @brief Stop the interactive screen loop and join the background thread.
+   *
+   * Gracefully terminates the FTXUI event loop and waits for the thread to finish.
+   * Safe to call if start() was never called, or after stop() already ran. Thread-safe.
+   */
   void stop();
 
   /**
@@ -156,7 +193,11 @@ public:
     const Sophus::SE3d & pose,
     const lighthouse_geometry_utils::AutoCovDiagonal & auto_cov);
 
-  /// Clear the deck pose display. Thread-safe.
+  /**
+   * @brief Clear the deck pose display and trigger a redraw.
+   *
+   * Resets the deck pose and autocovariance to unset state. Thread-safe.
+   */
   void clear_deck_pose();
 
   /**
@@ -167,8 +208,13 @@ public:
   void append_log(std::string message);
 
 private:
-  /// Append @p entry to log_entries_, evicting the oldest if over the limit.
-  /// Caller must hold data_mutex_.
+  /**
+   * @brief Append entry to log_entries_, evicting the oldest if over the limit.
+   *
+   * This is an internal helper that does not acquire the mutex. Caller must hold data_mutex_.
+   *
+   * @param entry Timestamped log entry to append.
+   */
   void append_log_locked(std::string entry);
 
   /**
@@ -190,6 +236,7 @@ private:
    * @param deck_auto_cov Optional deck autocovariance to display.
    * @param sampling_active True if sampling is ready.
    * @param message Status message to display.
+   * @param log_entries Timestamped log entries to display in the log window.
    * @return FTXUI element representing the complete UI layout.
    */
   static ftxui::Element build_main_element(
