@@ -49,7 +49,7 @@ def generate_launch_description():
         output="screen",
         executable="mapper_ui",
         arguments=["--ros-args", "--log-level", "INFO"],
-        prefix="xterm -fa 'Monospace' -fs 14 -e",
+        prefix="xterm -geometry 160x50 -fa 'Monospace' -fs 12 -e",
     )
 
     # Shutdown launch when mapper node exits
