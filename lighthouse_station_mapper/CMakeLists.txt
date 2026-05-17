@@ -45,6 +45,7 @@ find_package(Sophus REQUIRED)
 
 # Shared rendering library
 add_library(mapper_ui_lib
+  src/command_queue.cpp
   src/mapper_screen_renderer.cpp
 )
 

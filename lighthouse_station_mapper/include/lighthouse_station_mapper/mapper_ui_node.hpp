@@ -34,6 +34,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include "lighthouse_geometry_utils/station_geometry_optimization.hpp"
+#include "lighthouse_station_mapper/command_queue.hpp"
 #include "lighthouse_station_mapper/datatypes.hpp"
 #include "lighthouse_station_mapper/mapper_screen_renderer.hpp"
 
@@ -133,8 +134,8 @@ private:
   /**
    * @brief Process the command queue and update UI state.
    *
-   * Acquires node_mutex_, drains command_queue_, processes pending commands,
-   * summarizes the buffer, updates UI state, and solves deck pose if geometry is available.
+   * Drains command_queue_, processes pending commands, summarizes the buffer,
+   * updates UI state, and solves deck pose if geometry is available.
    * This is the main processing function called by timer_callback().
    */
   void process_command_queue();
@@ -288,9 +289,8 @@ private:
    */
   DeckPoseId get_next_deck_pose_id();
 
-  /// Protects all mutable node state against concurrent access between
-  /// the ROS executor thread and renderer callbacks.
-  mutable std::mutex node_mutex_;
+  /// Thread-safe command queue for communication between UI thread and ROS thread.
+  CommandQueue command_queue_;
 
   /// Maximum allowed max-minus-min angular spread (radians) for a
   /// station to be considered stable enough for sampling.
@@ -305,10 +305,6 @@ private:
 
   /// Sliding-window buffer of timestamped raw measurements.
   std::deque<TimestampedLighthouseSample> sample_queue_;
-
-  /// Queue of deferred callbacks posted by the renderer thread,
-  /// drained by timer_callback() on the ROS executor thread.
-  std::queue<std::function<void()>> command_queue_;
 
   /// Accumulated samples the user has committed via the Sample button.
   std::vector<LighthouseSample> samples_taken_;
