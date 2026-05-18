@@ -14,16 +14,19 @@
 
 #include "test_helpers.hpp"
 
+#include <ceres/ceres.h>
+
 #include <algorithm>
 #include <cmath>
+
+#include "lighthouse_geometry_utils/utils.hpp"
 
 namespace lighthouse_geometry_utils::test
 {
 
 std::pair<std::array<double, 4>, std::array<double, 4>>
 compute_expected_measurements(
-  const Sophus::SE3d & base_station_pose_in_deck_frame,
-  const std::vector<Eigen::Vector2d> & sensor_poses)
+  const Sophus::SE3d & base_station_pose_in_deck_frame)
 {
   std::array<double, 4> elevations;
   std::array<double, 4> azimuths;
@@ -31,9 +34,9 @@ compute_expected_measurements(
   const Sophus::SE3d deck_pose_in_base_frame =
     base_station_pose_in_deck_frame.inverse();
 
-  for (std::size_t i = 0; i < sensor_poses.size(); ++i) {
-    const Eigen::Vector3d sensor_in_deck(sensor_poses[i].x(),
-      sensor_poses[i].y(), 0.0);
+  for (std::size_t i = 0; i < kLighthouseDeckSensorPoses.size(); ++i) {
+    const Eigen::Vector3d sensor_in_deck(kLighthouseDeckSensorPoses[i].x(),
+      kLighthouseDeckSensorPoses[i].y(), 0.0);
 
     const Eigen::Vector3d sensor_in_base =
       deck_pose_in_base_frame * sensor_in_deck;
@@ -52,12 +55,11 @@ compute_expected_measurements(
 std::pair<std::array<double, 4>, std::array<double, 4>>
 compute_expected_measurements_with_noise(
   const Sophus::SE3d & base_station_pose_in_deck_frame,
-  const std::vector<Eigen::Vector2d> & sensor_poses,
   double elevation_noise_mean, double elevation_noise_stddev,
   double azimuth_noise_mean, double azimuth_noise_stddev, std::mt19937 & rng)
 {
   auto [elevations, azimuths] = compute_expected_measurements(
-    base_station_pose_in_deck_frame, sensor_poses);
+    base_station_pose_in_deck_frame);
 
   std::normal_distribution<double> elevation_noise(elevation_noise_mean,
     elevation_noise_stddev);
@@ -148,6 +150,67 @@ Sophus::SE3d add_noise_to_pose(
   Sophus::SO3d noisy_rotation = pose.so3() * rotation_perturbation;
 
   return Sophus::SE3d(noisy_rotation, noisy_translation);
+}
+
+bool solve_sweep_plane_timestamps(
+  double t0,
+  double rotor_period,
+  const Sophus::SE3d & deck_pose_at_t0,
+  const Eigen::Vector3d & deck_velocity,
+  const Sophus::SE3d & station_pose,
+  std::array<double, 8> & sensor_timestamps)
+{
+  // Create the cost functor for both sweeps (8 residuals, 8 parameters)
+  ceres::CostFunction * cost_function =
+    new ceres::AutoDiffCostFunction<SweepPlaneTimestampFunctor, 8, 8>(
+    new SweepPlaneTimestampFunctor(
+      t0, rotor_period, deck_pose_at_t0, deck_velocity, station_pose));
+
+  // Set up the optimization problem
+  ceres::Problem problem;
+  problem.AddResidualBlock(cost_function, nullptr, sensor_timestamps.data());
+
+  // Configure the solver
+  ceres::Solver::Options options;
+  options.linear_solver_type = ceres::DENSE_QR;
+  options.minimizer_progress_to_stdout = false;
+  options.max_num_iterations = 1000;
+
+  // Solve
+  ceres::Solver::Summary summary;
+  ceres::Solve(options, &problem, &summary);
+
+  // Post-process: wrap all timestamps to be in the same rotor cycle
+  // Ceres may find valid plane intersections in different cycles due to
+  // the periodic nature of the rotating sweep planes
+  if (summary.termination_type == ceres::CONVERGENCE) {
+    // For each sweep, ensure all sensor timestamps are in the same cycle
+    for (int sweep_idx = 0; sweep_idx < 2; ++sweep_idx) {
+      // Compute which cycle each timestamp is in
+      std::array<int, 4> cycles;
+      std::array<double, 4> wrapped_times;
+
+      for (int sensor_idx = 0; sensor_idx < 4; ++sensor_idx) {
+        const int idx = sweep_idx * 4 + sensor_idx;
+        const double dt = sensor_timestamps[idx] - t0;
+        cycles[sensor_idx] = static_cast<int>(std::floor(dt / rotor_period));
+        wrapped_times[sensor_idx] = dt - cycles[sensor_idx] * rotor_period;
+      }
+
+      // Use the most common cycle (or first sensor's cycle if all different)
+      const int target_cycle = cycles[0];
+
+      // Wrap all sensors to the target cycle
+      for (int sensor_idx = 0; sensor_idx < 4; ++sensor_idx) {
+        const int idx = sweep_idx * 4 + sensor_idx;
+        const int cycle_diff = cycles[sensor_idx] - target_cycle;
+        sensor_timestamps[idx] -= cycle_diff * rotor_period;
+      }
+    }
+  }
+
+  // Return true if optimization converged
+  return summary.termination_type == ceres::CONVERGENCE;
 }
 
 }  // namespace lighthouse_geometry_utils::test

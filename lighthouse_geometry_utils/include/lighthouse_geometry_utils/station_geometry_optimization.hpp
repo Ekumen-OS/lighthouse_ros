@@ -96,9 +96,6 @@ private:
   /// Initializer used to compute initial pose estimates for the optimizer.
   StationGeometryInitialization initializer_;
 
-  /// 2D positions of the four sensors in the deck frame (in meters).
-  std::array<Eigen::Vector2d, 4> sensor_poses_;
-
   /// Collection of measurement samples indexed by sample pose ID.
   /// Samples with the same pose ID were taken from the same deck location.
   std::map<DeckPoseId, SampleLocationData> deck_pose_data_;

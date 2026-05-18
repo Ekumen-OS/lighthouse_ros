@@ -27,13 +27,7 @@
 namespace lighthouse_geometry_utils
 {
 
-StationGeometryOptimization::StationGeometryOptimization()
-: sensor_poses_{
-    kLighthouseDeckSensorPoses[0],
-    kLighthouseDeckSensorPoses[1],
-    kLighthouseDeckSensorPoses[2],
-    kLighthouseDeckSensorPoses[3],
-} {}
+StationGeometryOptimization::StationGeometryOptimization() {}
 
 void StationGeometryOptimization::addSample(
   const std::array<double, 4> & elevations,
@@ -133,7 +127,7 @@ StationPoseEstimates StationGeometryOptimization::solve()
       problem.AddResidualBlock(
         new ceres::AutoDiffCostFunction<BearingVectorErrorFunctor, 12, 7, 7>(
           new BearingVectorErrorFunctor(
-            sample.elevations, sample.azimuths, sensor_poses_)),
+            sample.elevations, sample.azimuths)),
         new ceres::HuberLoss(kHuberDeltaStations), deck_pose_data_,
         station_pose_data);
     }

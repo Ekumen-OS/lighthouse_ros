@@ -86,7 +86,7 @@ TEST_P(DeckPoseOptimizationPoseTest, RecoveredDeckPoseMatchesGroundTruth) {
         deck_pose.inverse() * scenario.station_poses[station_id];
       const auto [elevations, azimuths] =
         compute_expected_measurements_with_noise(
-        station_in_deck, kLighthouseDeckSensorPoses,
+        station_in_deck,
         kMeasurementNoiseMean, kMeasurementNoiseStddev,
         kMeasurementNoiseMean, kMeasurementNoiseStddev, rng);
       samples.push_back({elevations, azimuths, station_id});
@@ -251,7 +251,7 @@ TEST(DeckPoseOptimizationErrorTest, HandlesPartiallyUnknownStationIds) {
   // Create one valid sample (station ID 0) and one invalid (station ID 999)
   const auto [elevations0, azimuths0] =
     compute_expected_measurements_with_noise(
-    station_in_deck, kLighthouseDeckSensorPoses, 0.0, 0.0, 0.0, 0.0, rng);
+    station_in_deck, 0.0, 0.0, 0.0, 0.0, rng);
 
   DeckPoseOptimization::Sample valid_sample;
   valid_sample.elevations = elevations0;

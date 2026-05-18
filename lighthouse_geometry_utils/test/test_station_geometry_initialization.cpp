@@ -42,9 +42,7 @@ protected:
 std::pair<std::array<double, 4>, std::array<double, 4>>
 make_measurement(const Sophus::SE3d & station_pose_in_deck)
 {
-  return compute_expected_measurements(
-    station_pose_in_deck,
-    kLighthouseDeckSensorPoses);
+  return compute_expected_measurements(station_pose_in_deck);
 }
 
 // ---------- Error case tests ----------
@@ -223,7 +221,7 @@ TEST_P(
       scenario.deck_poses[deck_id].inverse() *
       scenario.station_poses[station_id];
     const auto [elevations, azimuths] = compute_expected_measurements(
-      station_in_deck, kLighthouseDeckSensorPoses);
+      station_in_deck);
     uut.addSample(elevations, azimuths, station_id, deck_id);
   }
 

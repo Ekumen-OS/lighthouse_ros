@@ -23,6 +23,8 @@
 
 #include <sophus/se3.hpp>
 
+#include "lighthouse_geometry_utils/utils.hpp"
+
 namespace lighthouse_geometry_utils
 {
 
@@ -42,14 +44,11 @@ struct BearingVectorErrorFunctor
    *
    * @param elevations Array of 4 elevation angles in radians.
    * @param azimuths Array of 4 azimuth angles in radians.
-   * @param sensor_poses Array of 4 sensor positions in deck frame (2D).
    */
   BearingVectorErrorFunctor(
     const std::array<double, 4> & elevations,
-    const std::array<double, 4> & azimuths,
-    const std::array<Eigen::Vector2d, 4> & sensor_poses)
-  : elevations_(elevations), azimuths_(azimuths),
-    sensor_poses_(sensor_poses) {}
+    const std::array<double, 4> & azimuths)
+  : elevations_(elevations), azimuths_(azimuths) {}
 
   /**
    * @brief Computes residuals for the optimization.
@@ -92,7 +91,9 @@ struct BearingVectorErrorFunctor
 
       // Sensor position in deck frame (z = 0 for planar sensors)
       Eigen::Matrix<T, 3, 1> sensor_position_in_deck(
-        T(sensor_poses_[i][0]), T(sensor_poses_[i][1]), T(0.0));
+        T(kLighthouseDeckSensorPoses[i][0]),
+        T(kLighthouseDeckSensorPoses[i][1]),
+        T(0.0));
 
       // Transform sensor to station frame
       const Eigen::Matrix<T, 3, 1> sensor_position_in_station =
@@ -117,8 +118,6 @@ private:
   std::array<double, 4> elevations_;
   /// Raw observed azimuth angles in radians.
   std::array<double, 4> azimuths_;
-  /// Sensor positions in deck frame (2D).
-  std::array<Eigen::Vector2d, 4> sensor_poses_;
 };
 
 /// Ceres cost functor that penalizes non-zero bias offsets,

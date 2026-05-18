@@ -32,13 +32,7 @@ DeckPoseOptimization::DeckPoseOptimization(
   const std::vector<Sophus::SE3d> & station_poses,
   const std::vector<StationId> & station_ids)
 : station_poses_(station_poses),
-  station_ids_(station_ids),
-  sensor_poses_{
-    kLighthouseDeckSensorPoses[0],
-    kLighthouseDeckSensorPoses[1],
-    kLighthouseDeckSensorPoses[2],
-    kLighthouseDeckSensorPoses[3],
-  } {}
+  station_ids_(station_ids) {}
 
 std::tuple<Sophus::SE3d, AutoCovDiagonal> DeckPoseOptimization::solve(
   const std::vector<Sample> & samples) const
@@ -116,7 +110,7 @@ std::tuple<Sophus::SE3d, AutoCovDiagonal> DeckPoseOptimization::solve(
     problem.AddResidualBlock(
       new ceres::AutoDiffCostFunction<BearingVectorErrorFunctor, 12, 7, 7>(
         new BearingVectorErrorFunctor(
-          sample.elevations, sample.azimuths, sensor_poses_)),
+          sample.elevations, sample.azimuths)),
       new ceres::HuberLoss(kHuberDeltaStations),
       deck_pose_estimation.data(),
       station_poses_mutable[station_index].data());

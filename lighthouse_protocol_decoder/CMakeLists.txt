@@ -24,6 +24,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(lighthouse_geometry_utils REQUIRED)
 
 # Fetch cppcrc library
 include(FetchContent)
@@ -54,6 +55,10 @@ target_include_directories(${PROJECT_NAME}
     ${cppcrc_SOURCE_DIR}
 )
 
+target_link_libraries(${PROJECT_NAME}
+  lighthouse_geometry_utils::lighthouse_geometry_utils
+)
+
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # Install
@@ -69,7 +74,7 @@ install(DIRECTORY include/
 )
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-ament_export_dependencies()
+ament_export_dependencies(lighthouse_geometry_utils)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)

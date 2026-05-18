@@ -64,7 +64,7 @@ TEST_P(StationPosePnPSolverPoseTest, recovers_pose_from_measurements) {
   std::mt19937 rng(42);
 
   const auto [elevations, azimuths] = compute_expected_measurements_with_noise(
-    expected_pose, kLighthouseDeckSensorPoses, kNoiseMeanRadians,
+    expected_pose, kNoiseMeanRadians,
     kNoiseStddevRadians, kNoiseMeanRadians, kNoiseStddevRadians, rng);
 
   const Sophus::SE3d recovered_pose = uut->solve(elevations, azimuths);
