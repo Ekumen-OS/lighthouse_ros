@@ -20,5 +20,6 @@ services:
       - lighthouse_ros_persistence:/home/developer/ws/persistence
     group_add:
       - "dialout"
+    network_mode: host
 volumes:
   lighthouse_ros_persistence:
