@@ -108,36 +108,18 @@ std::tuple<Sophus::SE3d, AutoCovDiagonal> DeckPoseOptimization::solve(
     problem.SetParameterBlockConstant(station_pose.data());
   }
 
-  // Create bias parameter blocks (8 per station: 4 elevation + 4 azimuth
-  // offsets), initialized to zero
-  std::vector<std::array<double, 8>> station_biases(station_ids_.size());
-  for (auto & bias : station_biases) {
-    bias.fill(0.0);
-  }
-
-  // Add bias parameter blocks and regularization residuals
-  for (std::size_t i = 0; i < station_biases.size(); ++i) {
-    problem.AddParameterBlock(station_biases[i].data(), 8);
-    problem.AddResidualBlock(
-      new ceres::AutoDiffCostFunction<BiasRegularizationFunctor, 8, 8>(
-        new BiasRegularizationFunctor()),
-      new ceres::HuberLoss(kHuberDeltaBiasRegularization),
-      station_biases[i].data());
-  }
-
   // Add bearing vector residual blocks (using valid_samples)
   for (const auto & sample : valid_samples) {
     const auto it = station_id_to_index.find(sample.station_id);
     const auto station_index = it->second;
 
     problem.AddResidualBlock(
-      new ceres::AutoDiffCostFunction<BearingVectorErrorFunctor, 12, 7, 7, 8>(
+      new ceres::AutoDiffCostFunction<BearingVectorErrorFunctor, 12, 7, 7>(
         new BearingVectorErrorFunctor(
           sample.elevations, sample.azimuths, sensor_poses_)),
       new ceres::HuberLoss(kHuberDeltaStations),
       deck_pose_estimation.data(),
-      station_poses_mutable[station_index].data(),
-      station_biases[station_index].data());
+      station_poses_mutable[station_index].data());
   }
 
   // Configure and run the solver

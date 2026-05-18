@@ -111,23 +111,6 @@ StationPoseEstimates StationGeometryOptimization::solve()
     problem.AddParameterBlock(station_pose.data(), 7, se3_parameterization);
   }
 
-  // Create bias parameter blocks (8 per station: 4 elevation + 4 azimuth
-  // offsets), initialized to zero
-  std::vector<std::array<double, 8>> station_biases(station_ids_.size());
-  for (auto & bias : station_biases) {
-    bias.fill(0.0);
-  }
-
-  // Add bias parameter blocks and regularization residuals
-  for (std::size_t i = 0; i < station_biases.size(); ++i) {
-    problem.AddParameterBlock(station_biases[i].data(), 8);
-    problem.AddResidualBlock(
-      new ceres::AutoDiffCostFunction<BiasRegularizationFunctor, 8, 8>(
-        new BiasRegularizationFunctor()),
-      new ceres::HuberLoss(kHuberDeltaBiasRegularization),
-      station_biases[i].data());
-  }
-
   // Fix the first deck to establish the reference frame
   problem.SetParameterBlockConstant(deck_poses_estimation[0].data());
 
@@ -148,12 +131,11 @@ StationPoseEstimates StationGeometryOptimization::solve()
         station_pose_estimations[station_index].data();
 
       problem.AddResidualBlock(
-        new ceres::AutoDiffCostFunction<BearingVectorErrorFunctor, 12, 7, 7,
-        8>(
+        new ceres::AutoDiffCostFunction<BearingVectorErrorFunctor, 12, 7, 7>(
           new BearingVectorErrorFunctor(
             sample.elevations, sample.azimuths, sensor_poses_)),
         new ceres::HuberLoss(kHuberDeltaStations), deck_pose_data_,
-        station_pose_data, station_biases[station_index].data());
+        station_pose_data);
     }
   }
 
