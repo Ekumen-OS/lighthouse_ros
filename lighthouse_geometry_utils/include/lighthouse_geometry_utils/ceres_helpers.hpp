@@ -54,23 +54,21 @@ struct BearingVectorErrorFunctor
   /**
    * @brief Computes residuals for the optimization.
    *
-   * Applies bias offsets to the observed angles, converts to bearing vectors,
-   * then uses chordal distance on the unit sphere: r = p_hat - v_obs.
+   * Converts observed angles to bearing vectors, then uses chordal distance
+   * on the unit sphere: r = p_hat - v_obs.
    * This keeps 3 residuals per sensor (2 effective DOF per bearing) and
    * provides a smooth, globally better-behaved gradient when angular errors
    * are large.
    *
    * @param deck_params Raw parameter array for deck SE3 pose (7).
    * @param station_params Raw parameter array for station SE3 pose (7).
-   * @param bias_params Raw parameter array for angle biases (8):
-   *        [el_offset_0..3, az_offset_0..3].
    * @param residuals Output array of 12 residuals (3 per sensor × 4 sensors).
    * @return true if computation succeeded.
    */
   template<typename T>
   bool operator()(
     T const * const deck_params, T const * const station_params,
-    T const * const bias_params, T * residuals) const
+    T * residuals) const
   {
     // Map raw parameters to Sophus SE3 (poses in world frame)
     Eigen::Map<Sophus::SE3<T> const> const deck_pose_in_world(deck_params);
@@ -82,9 +80,9 @@ struct BearingVectorErrorFunctor
       station_pose_in_world.inverse() * deck_pose_in_world;
 
     for (std::size_t i = 0; i < 4; ++i) {
-      // Apply bias offsets to observed angles
-      const T el = T(elevations_[i]) + bias_params[i];
-      const T az = T(azimuths_[i]) + bias_params[4 + i];
+      // Use observed angles directly
+      const T el = T(elevations_[i]);
+      const T az = T(azimuths_[i]);
 
       // Convert corrected spherical coordinates to bearing vector
       const T cos_el = ceres::cos(el);
