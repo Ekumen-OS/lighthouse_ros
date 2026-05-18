@@ -19,11 +19,17 @@
 namespace lighthouse_geometry_utils
 {
 
+// Lighthouse deck sensor geometry (from Crazyflie firmware)
+// Distance between sensors in the width direction (Y-axis): 15mm / 2 = 7.5mm
+constexpr double kSensorPosW = 0.015 / 2.0;  // 0.0075 m
+// Distance between sensors in the length direction (X-axis): 30mm / 2 = 15mm
+constexpr double kSensorPosL = 0.030 / 2.0;  // 0.015 m
+
 const std::vector<Eigen::Vector2d> kLighthouseDeckSensorPoses{
-  Eigen::Vector2d(-0.01745, 0.0075),    // back-left
-  Eigen::Vector2d(-0.01745, -0.0075),    // back-right
-  Eigen::Vector2d(0.01745, 0.0075),     // front-left
-  Eigen::Vector2d(0.01745, -0.0075),    // front-right
+  Eigen::Vector2d(-kSensorPosL, kSensorPosW),    // back-left
+  Eigen::Vector2d(-kSensorPosL, -kSensorPosW),   // back-right
+  Eigen::Vector2d(kSensorPosL, kSensorPosW),     // front-left
+  Eigen::Vector2d(kSensorPosL, -kSensorPosW),    // front-right
 };
 
 AutoCovDiagonal extractAutoCovDiagonal(const double * cov_matrix)
