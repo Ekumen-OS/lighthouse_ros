@@ -35,6 +35,7 @@ add_library(${PROJECT_NAME} SHARED
   src/station_pose_pnp_solver.cpp
   src/station_geometry_initialization.cpp
   src/station_geometry_optimization.cpp
+  src/station_angles_utils.cpp
   src/utils.cpp
 )
 
@@ -142,6 +143,17 @@ if(BUILD_TESTING)
 
   if(TARGET test_real_world_measurements)
     target_link_libraries(test_real_world_measurements
+      ${PROJECT_NAME}
+      test_helpers
+    )
+  endif()
+
+  ament_add_gtest(test_test_helpers
+    test/test_test_helpers.cpp
+  )
+
+  if(TARGET test_test_helpers)
+    target_link_libraries(test_test_helpers
       ${PROJECT_NAME}
       test_helpers
     )

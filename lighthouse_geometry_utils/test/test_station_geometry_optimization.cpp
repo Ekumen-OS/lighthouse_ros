@@ -56,11 +56,11 @@ TEST_F(StationGeometryOptimizationTest, DisconnectedGraphThrows) {
     create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [e0, a0] =
-    compute_expected_measurements(station_pose, kLighthouseDeckSensorPoses);
+    compute_expected_measurements(station_pose);
   uut->addSample(e0, a0, /*station_id=*/ 0, /*deck_pose_id=*/ 0);
 
   const auto [e1, a1] =
-    compute_expected_measurements(station_pose, kLighthouseDeckSensorPoses);
+    compute_expected_measurements(station_pose);
   uut->addSample(e1, a1, /*station_id=*/ 1, /*deck_pose_id=*/ 1);
 
   EXPECT_THROW(uut->solve(), std::runtime_error);
@@ -71,7 +71,7 @@ TEST_F(StationGeometryOptimizationTest, ResetAndSolveWithNoSamplesThrows) {
     create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [e, a] =
-    compute_expected_measurements(station_pose, kLighthouseDeckSensorPoses);
+    compute_expected_measurements(station_pose);
   uut->addSample(e, a, /*station_id=*/ 0, /*deck_pose_id=*/ 0);
 
   uut->reset();
@@ -135,7 +135,7 @@ TEST_P(
         deck_poses[deck_id].inverse() * station_poses[station_id];
       const auto [elevations, azimuths] =
         compute_expected_measurements_with_noise(
-        station_in_deck, kLighthouseDeckSensorPoses,
+        station_in_deck,
         kMeasurementNoiseMean, kMeasurementNoiseStddev,
         kMeasurementNoiseMean, kMeasurementNoiseStddev, rng);
       optimizer.addSample(elevations, azimuths, station_id, deck_id);

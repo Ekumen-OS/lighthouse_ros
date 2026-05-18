@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "lighthouse_geometry_utils/station_angles_utils.hpp"
+
 namespace lighthouse_protocol_decoder
 {
 
@@ -218,106 +220,22 @@ MeasurementProcessor::calculatePhaseAngles(
 }
 
 std::pair<double, double>
-MeasurementProcessor::calculateV2Angles(
-  double phase_0,
-  double phase_1) const
-{
-  // Apply rotor tilt corrections to raw phase angles
-  // V2 base stations have light planes tilted ±30° from vertical
-  // The corrections are ±π/3 (60°) to account for both the tilt and 120° rotor offset
-  // The -π term centers the range to [-π, π)
-  const auto v2_angle_1 = phase_0 - M_PI + M_PI / 3.0;  // First sweep: +60° correction
-  const auto v2_angle_2 = phase_1 - M_PI - M_PI / 3.0;  // Second sweep: -60° correction
-
-  return {v2_angle_1, v2_angle_2};
-}
-
-std::pair<double, double>
-MeasurementProcessor::calculateV1Angles(
-  double v2_angle_1,
-  double v2_angle_2) const
-{
-  // Convert V2 angles (tilted planes) to V1 angles (plane intersection parameterization)
-  // This follows the Crazyflie firmware conversion in pulse_processor_v2.c
-  // Note: angleH and angleV are NOT standard spherical azimuth/elevation
-
-  constexpr double kTiltAngle = M_PI / 6.0;  // 30° - physical tilt of light planes
-  const auto tant = std::tan(kTiltAngle);
-
-  // angleH: horizontal plane angle (average of V2 angles)
-  const auto angleH = (v2_angle_1 + v2_angle_2) / 2.0;
-
-  // angleV: vertical plane angle (from plane intersection geometry)
-  const auto angleV = std::atan2(
-    std::sin(v2_angle_2 - v2_angle_1),
-    tant * (std::cos(v2_angle_1) + std::cos(v2_angle_2))
-  );
-
-  return {angleH, angleV};
-}
-
-std::pair<double, double>
-MeasurementProcessor::convertV1AnglesToSpherical(
-  double angleH,
-  double angleV) const
-{
-  // Convert V1 angles (plane intersection) to standard spherical coordinates
-  // Following the Crazyflie firmware approach in lighthouse_geometry.c
-
-  const auto sin_h = std::sin(angleH);
-  const auto cos_h = std::cos(angleH);
-  const auto sin_v = std::sin(angleV);
-  const auto cos_v = std::cos(angleV);
-
-  // Define normal vectors to two perpendicular planes
-  // plane_a: normal to vertical plane rotated by angleH around Z-axis
-  // plane_b: normal to horizontal plane rotated by angleV around Y-axis
-  const std::array<double, 3> plane_a = {sin_h, -cos_h, 0.0};
-  const std::array<double, 3> plane_b = {-sin_v, 0.0, cos_v};
-
-  // Ray direction is the cross product: plane_b × plane_a
-  std::array<double, 3> raw_ray = {
-    plane_b[1] * plane_a[2] - plane_b[2] * plane_a[1],  // = cos_v * cos_h
-    plane_b[2] * plane_a[0] - plane_b[0] * plane_a[2],  // = cos_v * sin_h
-    plane_b[0] * plane_a[1] - plane_b[1] * plane_a[0]   // = sin_v * cos_h
-  };
-
-  // Normalize the ray vector
-  const auto ray_length = std::sqrt(
-    raw_ray[0] * raw_ray[0] +
-    raw_ray[1] * raw_ray[1] +
-    raw_ray[2] * raw_ray[2]
-  );
-
-  raw_ray[0] /= ray_length;
-  raw_ray[1] /= ray_length;
-  raw_ray[2] /= ray_length;
-
-  // Convert normalized ray to true spherical coordinates
-  // Standard spherical coordinate conversion: (x, y, z) → (azimuth, elevation)
-  const auto azimuth = std::atan2(raw_ray[1], raw_ray[0]);
-  const auto elevation = std::asin(raw_ray[2]);
-
-  return {azimuth, elevation};
-}
-
-std::pair<double, double>
 MeasurementProcessor::calculatePolarBearing(
   double phase_beam_0,
   double phase_beam_1) const
 {
-  // This function is now just an orchestrator that calls the individual steps
-  // For backwards compatibility, keeping the same signature
+  // Convert phase angles through V2 → V1 → spherical coordinates pipeline
+  // Step 1: Convert phase angles to V2 angles (with tilt corrections)
+  const auto [v2_angle_1, v2_angle_2] =
+    lighthouse_geometry_utils::calculateV2Angles(phase_beam_0, phase_beam_1);
 
-  // Step 1: Phase angles are already provided as input (this step done in extractMeasurements)
-  // Step 2: Convert phase angles to V2 angles (with tilt corrections)
-  const auto [v2_angle_1, v2_angle_2] = calculateV2Angles(phase_beam_0, phase_beam_1);
+  // Step 2: Convert V2 angles to V1 angles (plane intersection parameterization)
+  const auto [angleH, angleV] =
+    lighthouse_geometry_utils::calculateV1Angles(v2_angle_1, v2_angle_2);
 
-  // Step 3: Convert V2 angles to V1 angles (plane intersection parameterization)
-  const auto [angleH, angleV] = calculateV1Angles(v2_angle_1, v2_angle_2);
-
-  // Step 4: Convert V1 angles to true spherical coordinates
-  const auto [azimuth, elevation] = convertV1AnglesToSpherical(angleH, angleV);
+  // Step 3: Convert V1 angles to true spherical coordinates
+  const auto [azimuth, elevation] =
+    lighthouse_geometry_utils::convertV1AnglesToSpherical(angleH, angleV);
 
   return {azimuth, elevation};
 }

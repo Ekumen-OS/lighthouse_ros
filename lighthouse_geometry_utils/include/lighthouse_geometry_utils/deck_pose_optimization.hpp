@@ -75,9 +75,6 @@ private:
   /// Station IDs corresponding to station_poses_.
   std::vector<StationId> station_ids_;
 
-  /// 2D positions of the four sensors in the deck frame (in meters).
-  std::array<Eigen::Vector2d, 4> sensor_poses_;
-
   /// Huber loss delta for bearing vector residuals.
   static constexpr double kHuberDeltaStations = 10e-3;
 };
