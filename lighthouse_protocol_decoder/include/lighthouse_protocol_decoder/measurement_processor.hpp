@@ -66,12 +66,54 @@ private:
     std::uint8_t base_station_id) const;
 
   /// Calculate polar bearing from two phase measurements
-  /// @param phase_beam_0 Phase of first beam (radians)
-  /// @param phase_beam_1 Phase of second beam (radians)
-  /// @return Pair of (azimuth, elevation) in radians
+  ///
+  /// This function converts raw phase measurements to true spherical coordinates
+  /// through a multi-step process matching the Crazyflie firmware:
+  /// 1. Phase angles → V2 angles (with ±60° tilt corrections)
+  /// 2. V2 angles → V1 angles (plane intersection parameterization)
+  /// 3. V1 angles → 3D ray direction (cross product of plane normals)
+  /// 4. Ray direction → Spherical coordinates (azimuth, elevation)
+  ///
+  /// @param phase_beam_0 Phase of first beam (radians, 0 to 2π)
+  /// @param phase_beam_1 Phase of second beam (radians, 0 to 2π)
+  /// @return Pair of (azimuth, elevation) in radians, standard spherical coordinates
   std::pair<double, double> calculatePolarBearing(
     double phase_beam_0,
     double phase_beam_1) const;
+
+  /// Convert timing offsets to phase angles
+  /// @param offset_0 First sweep normalized offset (ticks)
+  /// @param offset_1 Second sweep normalized offset (ticks)
+  /// @param period Rotor period for the base station channel (ticks)
+  /// @return Pair of (phase_0, phase_1) in radians [0, 2π)
+  std::pair<double, double> calculatePhaseAngles(
+    double offset_0,
+    double offset_1,
+    double period) const;
+
+  /// Convert phase angles to V2 angles with rotor tilt corrections
+  /// @param phase_0 First sweep phase angle (radians)
+  /// @param phase_1 Second sweep phase angle (radians)
+  /// @return Pair of (v2_angle_1, v2_angle_2) in radians [-π, π)
+  std::pair<double, double> calculateV2Angles(
+    double phase_0,
+    double phase_1) const;
+
+  /// Convert V2 angles to V1 angles (plane intersection parameterization)
+  /// @param v2_angle_1 First V2 angle (radians)
+  /// @param v2_angle_2 Second V2 angle (radians)
+  /// @return Pair of (angleH, angleV) - NOT standard spherical coordinates
+  std::pair<double, double> calculateV1Angles(
+    double v2_angle_1,
+    double v2_angle_2) const;
+
+  /// Convert V1 angles to true spherical coordinates
+  /// @param angleH Horizontal plane angle (radians)
+  /// @param angleV Vertical plane angle (radians)
+  /// @return Pair of (azimuth, elevation) in radians, standard spherical coordinates
+  std::pair<double, double> convertV1AnglesToSpherical(
+    double angleH,
+    double angleV) const;
 
   /// Validate that the spread of bearing angles across sensors is physically
   /// plausible given the sensor's maximum baseline

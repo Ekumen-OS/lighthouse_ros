@@ -27,38 +27,38 @@ using test_helpers::createSweepBlockRawData;
 using test_helpers::StdoutLogger;
 
 // Helper function to convert desired bearing angles to timing offsets
-// This is the exact mathematical inverse of the angle calculation formula
+// This inverts the FULL 4-step decodification process
 std::pair<std::uint32_t, std::uint32_t>
-anglesToOffsets(double angleH_deg, double angleV_deg)
+anglesToOffsets(double azimuth_deg, double elevation_deg)
 {
-  // Use channel 0 period as reference
+  // Use channel 1 period as reference
   constexpr std::uint32_t kPeriod = 479500;
 
   // Convert to radians
-  const double angleH = angleH_deg * M_PI / 180.0;
-  const double angleV = angleV_deg * M_PI / 180.0;
+  const double azimuth = azimuth_deg * M_PI / 180.0;
+  const double elevation = elevation_deg * M_PI / 180.0;
 
-  // Invert the elevation formula to find the half-difference of V2 angles
-  // From: angleV = atan2(sin(2d), tan(π/6) * 2 * cos(angleH) * cos(d))
-  // We can derive: sin(d) = tan(angleV) * tan(π/6) * cos(angleH)
-  // where d = (v2_angle_2 - v2_angle_1) / 2
+  // Reverse Step 4: Convert spherical coordinates to V1 angles (angleH, angleV)
+  // Derived from the forward transformation equations:
+  //   angleH has a direct relationship to azimuth
+  //   angleV is derived from the plane intersection geometry
+  const double angleH = azimuth;
+  const double angleV = std::atan2(
+    std::sin(elevation),
+    std::cos(elevation) * std::cos(azimuth)
+  );
+
+  // Reverse Step 3: Convert V1 angles back to V2 angles
   const double tant = std::tan(M_PI / 6.0);
   const double d = std::asin(std::tan(angleV) * tant * std::cos(angleH));
-
-  // Calculate V2 angles from angleH and the half-difference
-  // v2_angle_1 = angleH - d
-  // v2_angle_2 = angleH + d
   const double v2_angle_1 = angleH - d;
   const double v2_angle_2 = angleH + d;
 
-  // Calculate phases from V2 angles (inverse of the decoder formula)
-  // phase_0 = v2_angle_1 + π - π/3
-  // phase_1 = v2_angle_2 + π + π/3
+  // Reverse Step 2: Convert V2 angles to phase angles
   const double phase_0 = v2_angle_1 + M_PI - M_PI / 3.0;
   const double phase_1 = v2_angle_2 + M_PI + M_PI / 3.0;
 
-  // Convert phases to timing offsets
-  // offset = (phase / 2π) × period
+  // Reverse Step 1: Convert phase angles to timing offsets
   const auto offset_0 = static_cast<std::uint32_t>((phase_0 / (2.0 * M_PI)) * kPeriod);
   const auto offset_1 = static_cast<std::uint32_t>((phase_1 / (2.0 * M_PI)) * kPeriod);
 
@@ -441,21 +441,21 @@ TEST_F(MeasurementProcessorTest, ValidationRejectsBoundaryExceedingAzimuthSpread
 // ============================================================================
 // Angle Calculation Formula Validation Tests (Parameterized)
 // ============================================================================
-// These tests verify the correct V2 angle calculation formula is used.
-// Reference: Crazyflie firmware pulse_processor_v2.c calculateAngles() and
-// pulseProcessorV2ConvertToV1Angles()
+// These tests verify the correct FULL 4-step V2 decodification process:
+//   Step 1: Timing offsets → phase angles
+//   Step 2: Phase angles → V2 angles (with ±60° phase corrections)
+//   Step 3: V2 angles → V1 angles (angleH, angleV plane intersection)
+//   Step 4: V1 angles → ray → spherical coordinates (azimuth, elevation)
 //
-// The correct formula accounts for the ±60° rotor tilt in V2 base stations:
-//   v2_angle_1 = phase_0 - π + π/3
-//   v2_angle_2 = phase_1 - π - π/3
-//   azimuth = (v2_angle_1 + v2_angle_2) / 2
-//   elevation = atan2(sin(v2_angle_2 - v2_angle_1),
-//                     tan(π/6) * (cos(v2_angle_1) + cos(v2_angle_2)))
+// Reference: Crazyflie firmware pulse_processor_v2.c and lighthouse_geometry.c
+//
+// These tests verify the final output is true spherical azimuth/elevation,
+// not the intermediate angleH/angleV values from Step 3.
 
 struct AngleTestCase
 {
-  double angleH_deg;
-  double angleV_deg;
+  double azimuth_deg;    // Final spherical azimuth
+  double elevation_deg;  // Final spherical elevation
   double tolerance_deg;
   std::string description;
 };
@@ -468,8 +468,8 @@ class AngleFormulaTest : public MeasurementProcessorTest,
 TEST_P(AngleFormulaTest, CorrectAngleCalculation) {
   const auto & test_case = GetParam();
 
-  // Convert desired angles to offsets using the exact inverse formula
-  const auto [offset_0, offset_1] = anglesToOffsets(test_case.angleH_deg, test_case.angleV_deg);
+  // Convert desired spherical coordinates to offsets using the inverse of the full 4-step process
+  const auto [offset_0, offset_1] = anglesToOffsets(test_case.azimuth_deg, test_case.elevation_deg);
 
   // Send two blocks with calculated offsets
   processor_->processBlock(
@@ -479,17 +479,17 @@ TEST_P(AngleFormulaTest, CorrectAngleCalculation) {
 
   ASSERT_EQ(bearings_.size(), 1) << "Failed for: " << test_case.description;
 
-  // Check angleH (azimuth)
+  // Check azimuth (final spherical coordinate)
   EXPECT_NEAR(
-    bearings_[0].sensor_angles[0].azimuth, test_case.angleH_deg,
+    bearings_[0].sensor_angles[0].azimuth, test_case.azimuth_deg,
     test_case.tolerance_deg)
-    << "AngleH mismatch for: " << test_case.description;
+    << "Azimuth mismatch for: " << test_case.description;
 
-  // Check angleV (elevation)
+  // Check elevation (final spherical coordinate)
   EXPECT_NEAR(
-    bearings_[0].sensor_angles[0].elevation, test_case.angleV_deg,
+    bearings_[0].sensor_angles[0].elevation, test_case.elevation_deg,
     test_case.tolerance_deg)
-    << "AngleV mismatch for: " << test_case.description;
+    << "Elevation mismatch for: " << test_case.description;
 
   // All sensors should have the same angles since they have the same offsets
   for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
@@ -543,13 +543,14 @@ INSTANTIATE_TEST_SUITE_P(
   )
 );
 
-// Keep the original SpecificBearingAngles test that validates against
-// manually-calculated offsets for backwards compatibility
-TEST_F(MeasurementProcessorTest, SpecificBearingAngles10DegMinus30Deg) {
-  // Test case with specific target bearings: angleH = 10°, angleV = 30°
-  // Offsets were empirically determined to produce these angles
-  const std::uint32_t offset_0 = 147218;
-  const std::uint32_t offset_1 = 358920;
+// Test with specific angle values to verify the full 4-step decodification
+TEST_F(MeasurementProcessorTest, SpecificBearingAngles10Deg30Deg) {
+  // Test case with specific target spherical coordinates: azimuth = 10°, elevation = 30°
+  const double target_azimuth = 10.0;
+  const double target_elevation = 30.0;
+
+  // Generate offsets using the inverse of the full 4-step process
+  const auto [offset_0, offset_1] = anglesToOffsets(target_azimuth, target_elevation);
 
   processor_->processBlock(
     createTestSweepBlock(1, 1000, offset_0, offset_0, offset_0, offset_0));
@@ -558,11 +559,11 @@ TEST_F(MeasurementProcessorTest, SpecificBearingAngles10DegMinus30Deg) {
 
   ASSERT_EQ(bearings_.size(), 1);
 
-  // Check azimuth is approximately 10 degrees
-  EXPECT_NEAR(bearings_[0].sensor_angles[0].azimuth, 10.0, 1.0);
+  // Check azimuth matches target
+  EXPECT_NEAR(bearings_[0].sensor_angles[0].azimuth, target_azimuth, 0.5);
 
-  // Check elevation is approximately 30 degrees
-  EXPECT_NEAR(bearings_[0].sensor_angles[0].elevation, 30.0, 1.0);
+  // Check elevation matches target
+  EXPECT_NEAR(bearings_[0].sensor_angles[0].elevation, target_elevation, 0.5);
 
   // All sensors should have the same angles since they have the same offsets
   for (std::size_t i = 1; i < kPulseProcessorNSensors; ++i) {
