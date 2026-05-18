@@ -108,9 +108,6 @@ private:
 
   /// Huber loss delta for bearing vector residuals.
   static constexpr double kHuberDeltaStations = 10e-3;
-
-  /// Huber loss delta for bias regularization residuals (0.5 degrees).
-  static constexpr double kHuberDeltaBiasRegularization = 0.5 * M_PI / 180.0;
 };
 
 }  // namespace lighthouse_geometry_utils
