@@ -93,19 +93,6 @@ bool MeasurementProcessor::blocksAreMatchedPair(
     return false;
   }
 
-  // Sanity check: offset should increase (second sweep comes after first)
-  // This is redundant with timestamp0 check but catches potential data corruption
-  if (previous.sensors[0].normalized_offset >
-    current.sensors[0].normalized_offset)
-  {
-    logger_->debug(
-      "Sweep pair rejected: sensor[0] offset did not increase (" +
-      std::to_string(previous.sensors[0].normalized_offset) +
-      " -> " +
-      std::to_string(current.sensors[0].normalized_offset) + ")");
-    return false;
-  }
-
   return true;
 }
 
