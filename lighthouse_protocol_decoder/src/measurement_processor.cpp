@@ -81,7 +81,20 @@ void MeasurementProcessor::reset() {per_channel_buffer_.clear();}
 bool MeasurementProcessor::blocksAreMatchedPair(
   const SweepBlockRawData & current, const SweepBlockRawData & previous) const
 {
-  // The current block's offset must be greater than the previous
+  // Check if they're from the same rotation using timestamp0 (rotor zero crossing time)
+  // This matches the Crazyflie firmware approach with a tight tolerance of 100 ticks (~4.2 μs)
+  const auto timestamp0_diff = timestampDiff(current.timestamp0, previous.timestamp0);
+
+  if (timestamp0_diff > 100) {
+    logger_->debug(
+      "Sweep pair rejected: timestamp0 mismatch (" +
+      std::to_string(timestamp0_diff) +
+      " ticks) - sweeps not from same rotation");
+    return false;
+  }
+
+  // Sanity check: offset should increase (second sweep comes after first)
+  // This is redundant with timestamp0 check but catches potential data corruption
   if (previous.sensors[0].normalized_offset >
     current.sensors[0].normalized_offset)
   {
@@ -90,19 +103,6 @@ bool MeasurementProcessor::blocksAreMatchedPair(
       std::to_string(previous.sensors[0].normalized_offset) +
       " -> " +
       std::to_string(current.sensors[0].normalized_offset) + ")");
-    return false;
-  }
-
-  // The time difference between blocks should be less than ~180 degrees
-  const auto block_delta_timestamp =
-    timestampDiff(current.timestamp, previous.timestamp);
-
-  if (block_delta_timestamp > kMaxTimestampDiffForBlockMatch) {
-    logger_->debug(
-      "Sweep pair rejected: timestamp delta between blocks (" +
-      std::to_string(block_delta_timestamp) +
-      " ticks) exceeds half-rotation limit (" +
-      std::to_string(kMaxTimestampDiffForBlockMatch) + " ticks)");
     return false;
   }
 

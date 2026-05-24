@@ -222,6 +222,8 @@ createSweepBlockRawData(
   block.sensors[1].normalized_offset = offset1;
   block.sensors[2].normalized_offset = offset2;
   block.sensors[3].normalized_offset = offset3;
+  // Note: timestamp0 is not set here (defaults to 0)
+  // Use createRealisticSweepBlocks for tests that need proper timestamp0 values
   return block;
 }
 
@@ -297,8 +299,26 @@ createSweepBlocksFromGeometry(
     base_station_id, timestamp_first,
     offsets_sweep0[0], offsets_sweep0[1], offsets_sweep0[2], offsets_sweep0[3]);
 
+  // Calculate timestamp_second to ensure both blocks have the same timestamp0
+  // For sweeps from the same rotation: timestamp0 = timestamp - offset_reference
+  // Find the minimum offset for each sweep (this will be the reference sensor)
+  const std::uint32_t min_offset_sweep0 = std::min(
+      {
+        offsets_sweep0[0], offsets_sweep0[1], offsets_sweep0[2], offsets_sweep0[3]});
+  const std::uint32_t min_offset_sweep1 = std::min(
+      {
+        offsets_sweep1[0], offsets_sweep1[1], offsets_sweep1[2], offsets_sweep1[3]});
+
+  // Calculate timestamp_second so both sweeps have the same timestamp0
+  // timestamp0 = timestamp_first - min_offset_sweep0 = timestamp_second - min_offset_sweep1
+  // Therefore: timestamp_second = timestamp_first + (min_offset_sweep1 - min_offset_sweep0)
+  const std::uint32_t offset_diff =
+    (min_offset_sweep1 - min_offset_sweep0) & kTimestampCounterMask;
+  const std::uint32_t calculated_timestamp_second =
+    (timestamp_first + offset_diff) & kTimestampCounterMask;
+
   SweepBlockRawData block_second = createSweepBlockRawData(
-    base_station_id, timestamp_second,
+    base_station_id, calculated_timestamp_second,
     offsets_sweep1[0], offsets_sweep1[1], offsets_sweep1[2], offsets_sweep1[3]);
 
   return {block_first, block_second};

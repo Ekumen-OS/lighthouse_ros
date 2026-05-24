@@ -328,7 +328,8 @@ TEST_P(MovingDeckPoseRecoveryTest, AssessesPoseRecoveryWithMotion)
   std::cout << "\n=== Moving Deck Pose Recovery Performance ===" << std::endl;
   std::cout << "Position: (" << params.position.x() << ", "
             << params.position.y() << ", " << params.position.z() << ") m, ";
-  std::cout << "Velocity: (" << params.velocity_x << ", " << params.velocity_y << ", " << params.velocity_z << ") m/s\n";
+  std::cout << "Velocity: (" << params.velocity_x << ", " << params.velocity_y << ", " <<
+    params.velocity_z << ") m/s\n";
   std::cout << std::string(150, '-') << std::endl;
   std::cout << std::setw(8) << "Scale"
             << std::setw(10) << "Vx (m/s)"
@@ -422,18 +423,25 @@ INSTANTIATE_TEST_SUITE_P(
   MovingDeckPoseRecoveryTest,
   ::testing::Values(
     // Velocity along +Y axis
-    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, 2.0, 0.0, "3m distance, plus 1 m/s along Y"},
+    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, 2.0, 0.0,
+      "3m distance, plus 1 m/s along Y"},
     // Velocity along -Y axis
-    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, -2.0, 0.0, "3m distance, minus 1 m/s along Y"},
+    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, -2.0, 0.0,
+      "3m distance, minus 1 m/s along Y"},
     // Velocity along +Z axis
-    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, 0.0, 2.0, "3m distance, plus 1 m/s along Z"},
+    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, 0.0, 2.0,
+      "3m distance, plus 1 m/s along Z"},
     // Velocity along -Z axis
-    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, 0.0, -2.0, "3m distance, minus 1 m/s along Z"},
+    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, 0.0, -2.0,
+      "3m distance, minus 1 m/s along Z"},
     // Velocity along both Y and Z axes
-    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, 1.0, 1.0, "3m distance, 1 m/s along Y and Z"},
+    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.0, 1.0, 1.0,
+      "3m distance, 1 m/s along Y and Z"},
     // Low velocity cases (0.2 m/s)
-    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.2, 0.0, 0.0, "3m distance, plus 0.2 m/s along X"},
-    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), -0.2, 0.0, 0.0, "3m distance, minus 0.2 m/s along X"}  ),
+    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), 0.2, 0.0, 0.0,
+      "3m distance, plus 0.2 m/s along X"},
+    MovingDeckParams{Eigen::Vector3d(3.0, 0.0, 0.0), -0.2, 0.0, 0.0,
+      "3m distance, minus 0.2 m/s along X"}),
   [](const ::testing::TestParamInfo<MovingDeckParams> & info) {
     std::string name = info.param.description;
     std::replace_if(
