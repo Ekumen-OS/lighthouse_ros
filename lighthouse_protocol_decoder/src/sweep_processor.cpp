@@ -142,7 +142,6 @@ SweepBlockRawData SweepProcessor::completeBlockInformation() const
   }
 
   // Complete the information for all sensors
-  auto min_timestamp = reference_sensor_timestamp;
   for (const auto &[sensor, frame] : block_frames_) {
     SensorRawMeasurement sensor_measurement;
     sensor_measurement.normalized_offset = frame.sync_offset;
@@ -156,16 +155,10 @@ SweepBlockRawData SweepProcessor::completeBlockInformation() const
     }
 
     sweep_contents.sensors[sensor] = sensor_measurement;
-
-    // Track minimum timestamp
-    if (frame.timestamp < min_timestamp) {
-      min_timestamp = frame.timestamp;
-    }
   }
 
-  // Use the minimum timestamp from all sensors (matching Python implementation)
-  // Note: This may fail if timestamp overflows within the sweep
-  sweep_contents.timestamp = min_timestamp;
+  // Use reference sensor timestamp (the sensor with sync_offset)
+  sweep_contents.timestamp = reference_sensor_timestamp;
 
   return sweep_contents;
 }

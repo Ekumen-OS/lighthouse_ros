@@ -231,8 +231,8 @@ TEST_F(SweepProcessorTest, DifferentSensorWithSyncOffset) {
   // Sensor 2 has the reference offset
   EXPECT_EQ(sweeps_[0].sensors[2].normalized_offset, 50000);
 
-  // Timestamp should be the minimum from all sensors (matching Python)
-  EXPECT_EQ(sweeps_[0].timestamp, 1000);
+  // Timestamp should be from the reference sensor (sensor 2)
+  EXPECT_EQ(sweeps_[0].timestamp, 1010);
 
   // Other sensors calculated relative to sensor 2
   // Sensor 0: offset = 50000 + (1000 - 1010) = 49990 (with 24-bit wrap)
