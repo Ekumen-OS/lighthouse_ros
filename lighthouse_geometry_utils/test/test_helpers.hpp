@@ -141,7 +141,7 @@ Sophus::SE3d add_noise_to_pose(
 struct SweepPlaneTimestampFunctor
 {
   // Standard Lighthouse deck sensor layout
-  static constexpr double kSensorXDistance = 0.0296;  // 29.6mm
+  static constexpr double kSensorXDistance = 0.0300;  // 29.6mm
   static constexpr double kSensorYDistance = 0.0150;  // 15.0mm
 
   // Standard V2 sweep plane tilts

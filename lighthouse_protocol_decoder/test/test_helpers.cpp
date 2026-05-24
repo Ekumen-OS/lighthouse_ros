@@ -236,7 +236,7 @@ createSweepBlocksFromGeometry(
   std::uint32_t timestamp_second)
 {
   // Sensor positions in deck frame (meters)
-  constexpr double kSensorXDistance = 0.0296;
+  constexpr double kSensorXDistance = 0.0300;
   constexpr double kSensorYDistance = 0.0150;
 
   const std::array<std::pair<double, double>, 4> sensor_offsets = {{
