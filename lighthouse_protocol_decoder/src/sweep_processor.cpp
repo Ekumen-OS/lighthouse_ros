@@ -71,8 +71,8 @@ bool SweepProcessor::validateSweep() const
     return false;
   }
 
-  // Validation criteria:
-  // 1. Exactly 3 sensors must have valid npoly values
+  // Validation criteria (matching firmware's processWorkspaceBlock):
+  // 1. At least 1 sensor must have valid npoly
   // 2. All sensors with valid npoly must have the same base_station_id
   // 3. Exactly 1 sensor must have a valid offset measurement (sync_offset != 0)
 
@@ -90,9 +90,9 @@ bool SweepProcessor::validateSweep() const
     }
   }
 
-  if (valid_npolys != 3) {
+  if (valid_npolys < 1) {
     logger_->debug(
-      "Sweep discarded: expected 3 sensors with valid polynomial, got " +
+      "Sweep discarded: need at least 1 sensor with valid polynomial, got " +
       std::to_string(valid_npolys));
     return false;
   }
