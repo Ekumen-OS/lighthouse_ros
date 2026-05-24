@@ -130,10 +130,8 @@ createCompleteMeasurement(
   std::vector<std::uint8_t> data;
 
   // Generate physically-consistent sweep blocks using realistic geometry
-  const std::uint32_t timestamp_second =
-    (base_timestamp + 5000) & kTimestampCounterMask;
   const auto [first_block, second_block] = createRealisticSweepBlocks(
-    base_station_id, base_timestamp, timestamp_second);
+    base_station_id, base_timestamp);
 
   // Helper to convert a SweepBlockRawData into 4 data frames
   auto append_sweep = [&](const SweepBlockRawData & block) {
@@ -232,8 +230,7 @@ createSweepBlocksFromGeometry(
   double station_x, double station_y, double station_z,
   double deck_x, double deck_y, double deck_z,
   std::uint8_t base_station_id,
-  std::uint32_t timestamp_first,
-  std::uint32_t timestamp_second)
+  std::uint32_t timestamp_first)
 {
   // Sensor positions in deck frame (meters)
   constexpr double kSensorXDistance = 0.0300;
@@ -327,8 +324,7 @@ createSweepBlocksFromGeometry(
 std::pair<SweepBlockRawData, SweepBlockRawData>
 createRealisticSweepBlocks(
   std::uint8_t base_station_id,
-  std::uint32_t timestamp_first,
-  std::uint32_t timestamp_second)
+  std::uint32_t timestamp_first)
 {
   // Default geometry: station at origin, deck 2m in front and 2cm below
   // This produces realistic angular spreads that pass validation:
@@ -338,7 +334,7 @@ createRealisticSweepBlocks(
   return createSweepBlocksFromGeometry(
     0.0, 0.0, 0.0,      // station at origin
     2.0, 0.0, -0.02,    // deck 2m in front, 2cm below
-    base_station_id, timestamp_first, timestamp_second);
+    base_station_id, timestamp_first);
 }
 
 }    // namespace test_helpers

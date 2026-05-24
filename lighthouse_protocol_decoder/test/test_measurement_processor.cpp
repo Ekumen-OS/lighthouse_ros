@@ -112,7 +112,7 @@ TEST_F(MeasurementProcessorTest, NoCallbackWithSingleBlock) {
 
 TEST_F(MeasurementProcessorTest, CallbackWithTwoMatchingBlocks) {
   // Send two blocks from the same base station that form a matched pair
-  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -152,9 +152,9 @@ TEST_F(MeasurementProcessorTest, NoCallbackWhenTimestamp0Mismatch) {
 
 TEST_F(MeasurementProcessorTest, BufferKeepsOnlyLastTwoBlocks) {
   // Send 3 blocks - buffer should only keep last 2
-  auto [block1a, block1b] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
-  auto [block2a, block2b] = test_helpers::createRealisticSweepBlocks(1, 3000, 4000);
-  auto [block3a, block3b] = test_helpers::createRealisticSweepBlocks(1, 5000, 6000);
+  auto [block1a, block1b] = test_helpers::createRealisticSweepBlocks(1, 1000);
+  auto [block2a, block2b] = test_helpers::createRealisticSweepBlocks(1, 3000);
+  auto [block3a, block3b] = test_helpers::createRealisticSweepBlocks(1, 5000);
 
   processor_->processBlock(block1a);
   processor_->processBlock(block1b);
@@ -169,8 +169,8 @@ TEST_F(MeasurementProcessorTest, BufferKeepsOnlyLastTwoBlocks) {
 
 TEST_F(MeasurementProcessorTest, DifferentBaseStationsProcessedSeparately) {
   // Send blocks from two different base stations
-  auto [block1a, block1b] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
-  auto [block2a, block2b] = test_helpers::createRealisticSweepBlocks(2, 1100, 2100);
+  auto [block1a, block1b] = test_helpers::createRealisticSweepBlocks(1, 1000);
+  auto [block2a, block2b] = test_helpers::createRealisticSweepBlocks(2, 1100);
 
   processor_->processBlock(block1a);
   processor_->processBlock(block2a);
@@ -226,7 +226,7 @@ TEST_F(MeasurementProcessorTest, BearingCalculationBasicValues) {
 
 TEST_F(MeasurementProcessorTest, BearingCalculationDifferentSensors) {
   // Test with realistic geometry - sensors have slightly different angles
-  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -250,7 +250,7 @@ TEST_F(MeasurementProcessorTest, BearingCalculationDifferentSensors) {
 
 TEST_F(MeasurementProcessorTest, BearingValuesInReasonableRange) {
   // Verify that calculated bearings are within reasonable ranges
-  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -273,7 +273,7 @@ TEST_F(MeasurementProcessorTest, MultipleConsecutiveMeasurements) {
   // Send multiple sweep pairs in sequence
   for (int i = 0; i < 4; ++i) {
     auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(
-      1, 1000 + i * 10000, 2000 + i * 10000);
+      1, 1000 + i * 10000);
     processor_->processBlock(block_first);
     processor_->processBlock(block_second);
   }
@@ -289,7 +289,7 @@ TEST_F(MeasurementProcessorTest, MultipleConsecutiveMeasurements) {
 
 TEST_F(MeasurementProcessorTest, TimestampAssignment) {
   // Verify that hardware_timestamp is set to the current block's timestamp
-  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -342,7 +342,7 @@ TEST_F(MeasurementProcessorTest, EdgeCaseZeroOffsets) {
 
 TEST_F(MeasurementProcessorTest, ValidationPassesWithRealisticGeometry) {
   // Default geometry should pass all validation checks
-  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
+  auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -359,7 +359,7 @@ TEST_F(MeasurementProcessorTest, ValidationRejectsExcessiveAzimuthSpread) {
   auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
     0.0, 0.0, 0.0,      // station at origin
     0.3, 0.0, 0.0,      // deck 30cm in front (same height)
-    1, 1000, 2000);
+    1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -374,7 +374,7 @@ TEST_F(MeasurementProcessorTest, ValidationRejectsExcessiveElevationSpread) {
   auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
     0.0, 0.0, 0.0,      // station at origin
     0.0, 0.0, -0.3,     // deck 30cm below (no forward offset)
-    1, 1000, 2000);
+    1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -389,7 +389,7 @@ TEST_F(MeasurementProcessorTest, ValidationRejectsCounterclockwiseWinding) {
   auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
     0.0, 0.0, 0.0,      // station at origin
     2.0, 0.0, +0.02,    // deck 2m in front, 2cm ABOVE (not below)
-    1, 1000, 2000);
+    1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -404,7 +404,7 @@ TEST_F(MeasurementProcessorTest, ValidationAcceptsBoundaryAzimuthSpread) {
   auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
     0.0, 0.0, 0.0,      // station at origin
     1.6, 0.0, -0.02,    // deck 1.6m in front, 2cm below
-    1, 1000, 2000);
+    1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
@@ -419,7 +419,7 @@ TEST_F(MeasurementProcessorTest, ValidationRejectsBoundaryExceedingAzimuthSpread
   auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
     0.0, 0.0, 0.0,      // station at origin
     0.6, 0.0, -0.02,    // deck 0.6m in front, 2cm below
-    1, 1000, 2000);
+    1, 1000);
 
   processor_->processBlock(block_first);
   processor_->processBlock(block_second);
