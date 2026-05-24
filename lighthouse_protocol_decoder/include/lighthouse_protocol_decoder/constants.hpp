@@ -38,7 +38,8 @@ constexpr std::uint32_t kMinTicksBetweenSlowBits = (887000 / 2) * 8 / 10;
 constexpr double kTimestampClockFrequency = 24e6;
 
 /// Maximum timestamp difference for sweep validation (in ticks)
-constexpr std::uint32_t kMaxTimestampDiffForSweep = 0x10000;
+/// Matches firmware's MAX_TICKS_SENSOR_TO_SENSOR (~0.42 ms at 24 MHz)
+constexpr std::uint32_t kMaxTimestampDiffForSweep = 10000;
 
 /// Maximum timestamp difference for block matching (in ticks)
 constexpr std::uint32_t kMaxTimestampDiffForBlockMatch = 220000;
