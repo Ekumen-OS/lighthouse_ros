@@ -451,4 +451,73 @@ INSTANTIATE_TEST_SUITE_P(
   }
 );
 
+/**
+ * @brief Test that verifies the 120° rotor separation produces period/3 time offset.
+ *
+ * For a sensor directly in front of the station (azimuth = 0°), the two sweep
+ * planes (mounted 120° apart on the rotor) should produce timestamps separated
+ * by approximately period/3 (~6.67ms for a ~20ms period).
+ */
+TEST(SweepTimeSeparationTest, CenteredSensorHasPeriodThirdOffset)
+{
+  // Station at origin, looking in +X direction
+  const Sophus::SE3d station_pose_in_world = Sophus::SE3d(
+    Sophus::SO3d(), Eigen::Vector3d(0.0, 0.0, 0.0));
+
+  // Deck centered directly in front of station at (2.0, 0.0, 0.0)
+  // Rotated 180° to face the station (so deck sensors also point toward station)
+  const Sophus::SE3d deck_pose_in_world(
+    Sophus::SO3d::rotY(M_PI),
+    Eigen::Vector3d(2.0, 0.0, 0.0));
+
+  // Static deck (zero velocity)
+  const Eigen::Vector3d deck_velocity(0.0, 0.0, 0.0);
+
+  // Initial guess for timestamps
+  const double mid_cycle_guess = kV2RotorPeriod / 2.0;
+  std::array<double, 8> timestamps = {
+    mid_cycle_guess, mid_cycle_guess, mid_cycle_guess, mid_cycle_guess,
+    mid_cycle_guess, mid_cycle_guess, mid_cycle_guess, mid_cycle_guess
+  };
+
+  // Solve for actual intersection timestamps
+  const double t0 = 0.0;
+  const bool success = solve_sweep_plane_timestamps(
+    t0,
+    kV2RotorPeriod,
+    deck_pose_in_world,
+    deck_velocity,
+    station_pose_in_world,
+    timestamps);
+
+  ASSERT_TRUE(success) << "Timestamp optimization failed to converge";
+
+  // Expected time separation: 120° of rotation = period/3
+  const double expected_time_offset = kV2RotorPeriod / 3.0;
+
+  // For each sensor, verify the time difference between sweeps
+  for (std::size_t sensor_idx = 0; sensor_idx < 4; ++sensor_idx) {
+    const double timestamp_sweep_0 = timestamps[sensor_idx];
+    const double timestamp_sweep_1 = timestamps[sensor_idx + 4];
+    const double time_difference = std::abs(timestamp_sweep_1 - timestamp_sweep_0);
+
+    // Allow 1% tolerance for the time offset
+    EXPECT_NEAR(time_difference, expected_time_offset, expected_time_offset * 0.01)
+      << "Sensor " << sensor_idx
+      << " sweep time separation should be ~period/3 (120° rotation)"
+      << "\n  Expected: " << expected_time_offset * 1e3 << " ms"
+      << "\n  Actual: " << time_difference * 1e3 << " ms"
+      << "\n  Difference: " << (time_difference - expected_time_offset) * 1e6 << " μs";
+  }
+
+  // Also verify all sensors have approximately the same time offset
+  // (they should since deck is centered and facing the station)
+  const double first_sensor_offset = std::abs(timestamps[4] - timestamps[0]);
+  for (std::size_t sensor_idx = 1; sensor_idx < 4; ++sensor_idx) {
+    const double this_sensor_offset = std::abs(timestamps[sensor_idx + 4] - timestamps[sensor_idx]);
+    EXPECT_NEAR(this_sensor_offset, first_sensor_offset, 1e-6)
+      << "All sensors should have similar time offsets when deck is centered";
+  }
+}
+
 }  // namespace lighthouse_geometry_utils::test

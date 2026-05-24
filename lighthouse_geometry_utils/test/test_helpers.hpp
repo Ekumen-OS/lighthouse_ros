@@ -191,10 +191,12 @@ struct SweepPlaneTimestampFunctor
    *
    * V2 rotor geometry:
    * - First sweep (tilt -π/6) at phase φ
-   * - Second sweep (tilt +π/6) at phase φ + 2π/3 (120° apart on rotor)
+   * - Second sweep (tilt +π/6) at phase φ + 2π/3 (physically mounted 120° ahead)
    *
    * The sweep plane at time t has:
-   * - Phase angle: φ(t) = 2π * (t - t0) / period
+   * - Phase angle: φ(t) = 2π * (t - t0) / period (same formula for both sweeps)
+   * - The 120° physical separation produces timestamps differing by ~period/3
+   * - The rotor_offset (±π/3) in target_phase compensates for what calculateV2Angles applies
    * - Normal vector (in station frame):
    *   n = [sin(φ) * cos(tilt), -cos(φ) * cos(tilt), sin(tilt)]
    *   where tilt = sweep_tilt + tilt_offset
@@ -238,6 +240,8 @@ struct SweepPlaneTimestampFunctor
         // Rotor phase at time t: raw angle in [0, 2π] convention
         // At t = t0 (dt = 0): phase = 0 (rotor pointing backward, -X direction)
         // At dt = period/2: phase = π (rotor pointing forward, +X direction)
+        // Same calculation for both sweeps - the 120° separation is handled
+        // by rotor_offset in target_phase, matching what calculateV2Angles applies
         const T rotor_phase = T(2.0 * M_PI) * dt / T(rotor_period_);
 
         // Deck pose at time t (with constant velocity motion)
