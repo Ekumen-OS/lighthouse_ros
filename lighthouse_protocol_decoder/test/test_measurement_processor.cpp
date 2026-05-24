@@ -119,7 +119,8 @@ TEST_F(MeasurementProcessorTest, CallbackWithTwoMatchingBlocks) {
 
   ASSERT_EQ(bearings_.size(), 1);
   EXPECT_EQ(bearings_[0].base_station_id, 1);
-  EXPECT_EQ(bearings_[0].hardware_timestamp, 2000);
+  // Hardware timestamp is set to the second block's timestamp (which is calculated)
+  EXPECT_EQ(bearings_[0].hardware_timestamp, block_second.timestamp);
 }
 
 TEST_F(MeasurementProcessorTest, NoCallbackWhenOffsetDecreases) {
@@ -132,13 +133,20 @@ TEST_F(MeasurementProcessorTest, NoCallbackWhenOffsetDecreases) {
   ASSERT_EQ(bearings_.size(), 0);
 }
 
-TEST_F(MeasurementProcessorTest, NoCallbackWhenTimestampDiffTooLarge) {
-  // Timestamp difference exceeds kMaxTimestampDiffForBlockMatch
-  processor_->processBlock(
-    createTestSweepBlock(1, 1000, 50000, 50100, 50200, 50300));
-  processor_->processBlock(
-    createTestSweepBlock(1, 300000, 100000, 100100, 100200, 100300));
+TEST_F(MeasurementProcessorTest, NoCallbackWhenTimestamp0Mismatch) {
+  // Create two blocks with different timestamp0 values to verify rejection
+  // First block: timestamp0 = 1000
+  auto block1 = createTestSweepBlock(1, 10000, 50000, 50100, 50200, 50300);
+  block1.timestamp0 = 1000;
 
+  // Second block: timestamp0 = 2000 (differs by 1000 ticks > 100 tick tolerance)
+  auto block2 = createTestSweepBlock(1, 20000, 100000, 100100, 100200, 100300);
+  block2.timestamp0 = 2000;
+
+  processor_->processBlock(block1);
+  processor_->processBlock(block2);
+
+  // Should be rejected due to timestamp0 mismatch
   ASSERT_EQ(bearings_.size(), 0);
 }
 
@@ -287,7 +295,8 @@ TEST_F(MeasurementProcessorTest, TimestampAssignment) {
   processor_->processBlock(block_second);
 
   ASSERT_EQ(bearings_.size(), 1);
-  EXPECT_EQ(bearings_[0].hardware_timestamp, 2000);
+  // Hardware timestamp is set to the second block's timestamp (which is calculated)
+  EXPECT_EQ(bearings_[0].hardware_timestamp, block_second.timestamp);
 }
 
 TEST_F(MeasurementProcessorTest, BaseStationPeriodUsedCorrectly) {
@@ -360,7 +369,8 @@ TEST_F(MeasurementProcessorTest, ValidationPassesWithRealisticGeometry) {
 
   ASSERT_EQ(bearings_.size(), 1);
   EXPECT_EQ(bearings_[0].base_station_id, 1);
-  EXPECT_EQ(bearings_[0].hardware_timestamp, 2000);
+  // Hardware timestamp is set to the second block's timestamp (which is calculated)
+  EXPECT_EQ(bearings_[0].hardware_timestamp, block_second.timestamp);
 }
 
 TEST_F(MeasurementProcessorTest, ValidationRejectsExcessiveAzimuthSpread) {

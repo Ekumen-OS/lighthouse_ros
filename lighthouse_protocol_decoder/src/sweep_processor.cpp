@@ -131,6 +131,11 @@ SweepBlockRawData SweepProcessor::completeBlockInformation() const
       reference_sensor_offset = frame.sync_offset;
       reference_sensor_timestamp = frame.timestamp;
       found_reference = true;
+
+      // Calculate timestamp0 - the rotor zero crossing time
+      // This matches the Crazyflie firmware approach
+      sweep_contents.timestamp0 = timestampDiff(
+        reference_sensor_timestamp, reference_sensor_offset);
     }
   }
 

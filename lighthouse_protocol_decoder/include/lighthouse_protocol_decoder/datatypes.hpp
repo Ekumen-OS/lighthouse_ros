@@ -54,6 +54,10 @@ struct SweepBlockRawData
   /// Timestamp of the sweep
   std::uint32_t timestamp{0};
 
+  /// Rotor zero-crossing timestamp (calculated from reference sensor)
+  /// This is timestamp - offset for the sensor that received the slow sweep
+  std::uint32_t timestamp0{0};
+
   /// Raw measurements from all sensors
   std::array<SensorRawMeasurement, kPulseProcessorNSensors> sensors;
 };
