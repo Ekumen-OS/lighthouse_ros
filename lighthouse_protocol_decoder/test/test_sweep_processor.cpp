@@ -91,24 +91,26 @@ TEST_F(SweepProcessorTest, InvalidSweepWithZeroValidNpolys) {
   ASSERT_EQ(sweeps_.size(), 0);
 }
 
-TEST_F(SweepProcessorTest, InvalidSweepWithTwoValidNpolys) {
-  // Only 2 sensors have valid npoly (need exactly 3)
+TEST_F(SweepProcessorTest, ValidSweepWithTwoValidNpolys) {
+  // 2 sensors have valid npoly (firmware accepts ≥1)
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001));
   processor_->processFrame(createTestFrame(2, 0x20, 1002));  // Invalid
   processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid
 
-  ASSERT_EQ(sweeps_.size(), 0);
+  ASSERT_EQ(sweeps_.size(), 1);
+  EXPECT_EQ(sweeps_[0].base_station_id, 1);
 }
 
-TEST_F(SweepProcessorTest, InvalidSweepWithFourValidNpolys) {
-  // All 4 sensors have valid npoly (need exactly 3)
+TEST_F(SweepProcessorTest, ValidSweepWithFourValidNpolys) {
+  // All 4 sensors have valid npoly (firmware accepts ≥1)
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001));
   processor_->processFrame(createTestFrame(2, 0x00, 1002));
   processor_->processFrame(createTestFrame(3, 0x00, 1003));
 
-  ASSERT_EQ(sweeps_.size(), 0);
+  ASSERT_EQ(sweeps_.size(), 1);
+  EXPECT_EQ(sweeps_[0].base_station_id, 1);
 }
 
 TEST_F(SweepProcessorTest, InvalidSweepWithNoSyncOffset) {
