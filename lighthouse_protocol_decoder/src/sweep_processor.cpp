@@ -34,11 +34,13 @@ void SweepProcessor::processFrame(const DataFrameContents & frame)
   // Store the frame
   block_frames_[latest_sensor] = frame;
 
-  // Remove any frames older than 0x10000 ticks (can't belong to same sweep)
+  // Remove any frames too far from latest (can't belong to same sweep)
+  // Use absolute difference to handle out-of-order arrival
   std::vector<std::uint8_t> sensors_to_remove;
   for (const auto &[sensor, stored_frame] : block_frames_) {
-    if (timestampDiff(latest_timestamp, stored_frame.timestamp) >
-      kMaxTimestampDiffForSweep)
+    if (timestampAbsDiffLargerThan(
+        latest_timestamp, stored_frame.timestamp,
+        kMaxTimestampDiffForSweep))
     {
       sensors_to_remove.push_back(sensor);
     }
