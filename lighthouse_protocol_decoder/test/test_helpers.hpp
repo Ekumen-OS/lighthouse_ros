@@ -135,28 +135,24 @@ createSweepBlockRawData(
 /// @param deck_y Deck center Y position in world frame (meters)
 /// @param deck_z Deck center Z position in world frame (meters)
 /// @param base_station_id Base station ID (1-16)
-/// @param timestamp_first Timestamp for first sweep
-/// @param timestamp_second Timestamp for second sweep
+/// @param timestamp_first Timestamp for first sweep (second sweep timestamp is auto-calculated)
 /// @return Pair of SweepBlockRawData (sweep 0, sweep 1) with realistic geometry
 std::pair<SweepBlockRawData, SweepBlockRawData>
 createSweepBlocksFromGeometry(
   double station_x, double station_y, double station_z,
   double deck_x, double deck_y, double deck_z,
   std::uint8_t base_station_id,
-  std::uint32_t timestamp_first,
-  std::uint32_t timestamp_second);
+  std::uint32_t timestamp_first);
 
 /// Create test sweep blocks with default realistic geometry
 /// Defaults: station at origin, deck 2m in front and 2cm below
 /// @param base_station_id Base station ID (1-16)
-/// @param timestamp_first Timestamp for first sweep
-/// @param timestamp_second Timestamp for second sweep
+/// @param timestamp_first Timestamp for first sweep (second sweep timestamp is auto-calculated)
 /// @return Pair of SweepBlockRawData (sweep 0, sweep 1) with realistic geometry
 std::pair<SweepBlockRawData, SweepBlockRawData>
 createRealisticSweepBlocks(
   std::uint8_t base_station_id,
-  std::uint32_t timestamp_first,
-  std::uint32_t timestamp_second);
+  std::uint32_t timestamp_first);
 
 /// Simple logger that prints to stdout for test debugging
 class StdoutLogger : public LoggerInterface
