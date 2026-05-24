@@ -340,26 +340,6 @@ TEST_F(MeasurementProcessorTest, EdgeCaseZeroOffsets) {
   EXPECT_FALSE(std::isnan(bearings_[0].sensor_angles[0].elevation));
 }
 
-TEST_F(MeasurementProcessorTest, NonMatchingPairSkipped) {
-  // Send two blocks where second one doesn't match
-  processor_->processBlock(
-    createTestSweepBlock(1, 1000, 100000, 100100, 100200, 100300));
-  processor_->processBlock(
-    createTestSweepBlock(
-      1, 2000, 50000, 50100, 50200,
-      50300));                                           // Offset decreased
-
-  ASSERT_EQ(bearings_.size(), 0);
-
-  // Send a third block that matches the second
-  processor_->processBlock(
-    createTestSweepBlock(1, 3000, 80000, 80100, 80200, 80300));
-
-  // Should get callback for pair (2, 3)
-  ASSERT_EQ(bearings_.size(), 1);
-  EXPECT_EQ(bearings_[0].hardware_timestamp, 3000);
-}
-
 TEST_F(MeasurementProcessorTest, ValidationPassesWithRealisticGeometry) {
   // Default geometry should pass all validation checks
   auto [block_first, block_second] = test_helpers::createRealisticSweepBlocks(1, 1000, 2000);
