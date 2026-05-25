@@ -39,9 +39,6 @@ struct BearingVectorErrorFunctor
   /**
    * @brief Constructs a functor with observed elevation and azimuth angles.
    *
-   * Stores raw angles so that per-station bias offsets can be applied during
-   * optimization before computing bearing vectors.
-   *
    * @param elevations Array of 4 elevation angles in radians.
    * @param azimuths Array of 4 azimuth angles in radians.
    */

@@ -132,7 +132,7 @@ Sophus::SE3d add_noise_to_pose(
  * the phase is shifted by π to match the forward-centered convention where 0 = forward.
  *
  * Constants (class members):
- * - kSensorXDistance: Sensor spacing in X direction (0.0296m)
+ * - kSensorXDistance: Sensor spacing in X direction (0.0300m)
  * - kSensorYDistance: Sensor spacing in Y direction (0.0150m)
  * - kFirstSweepTilt: Physical tilt of first sweep plane (-π/6 for V2)
  * - kSecondSweepTilt: Physical tilt of second sweep plane (+π/6 for V2)
@@ -141,7 +141,7 @@ Sophus::SE3d add_noise_to_pose(
 struct SweepPlaneTimestampFunctor
 {
   // Standard Lighthouse deck sensor layout
-  static constexpr double kSensorXDistance = 0.0300;  // 29.6mm
+  static constexpr double kSensorXDistance = 0.0300;  // 30.0mm
   static constexpr double kSensorYDistance = 0.0150;  // 15.0mm
 
   // Standard V2 sweep plane tilts

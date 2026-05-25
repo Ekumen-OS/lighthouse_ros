@@ -38,7 +38,7 @@ AutoCovDiagonal extractAutoCovDiagonal(const double * cov_matrix)
   // GetCovarianceBlockInTangentSpace returns a 6x6 matrix.
   // The ProductParameterization is (EigenQuaternionParameterization,
   // IdentityParameterization(3)), so the tangent space order is:
-  // [0-2] rotation (roll, pitch, yaw), [3-5] translation (x, y, z).
+  // [0-2] rotation (body-frame perturbation axes), [3-5] translation (x, y, z).
   AutoCovDiagonal auto_cov;
   auto_cov.roll = cov_matrix[0 * 6 + 0];
   auto_cov.pitch = cov_matrix[1 * 6 + 1];
