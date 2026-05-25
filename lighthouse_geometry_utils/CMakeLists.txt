@@ -158,6 +158,17 @@ if(BUILD_TESTING)
       test_helpers
     )
   endif()
+
+  ament_add_gtest(test_real_data_collinearity
+    test/test_real_data_collinearity.cpp
+  )
+
+  if(TARGET test_real_data_collinearity)
+    target_link_libraries(test_real_data_collinearity
+      ${PROJECT_NAME}
+      test_helpers
+    )
+  endif()
 endif()
 
 ament_package()

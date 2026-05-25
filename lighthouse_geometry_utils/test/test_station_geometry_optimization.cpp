@@ -100,7 +100,7 @@ protected:
   static constexpr double kMeasurementNoiseStddev = deg2rad(0.0001);
 
   static constexpr double kMaxStationPositionOffset = 0.5;
-  static constexpr double kMaxStationRotationOffset = deg2rad(30.0);
+  static constexpr double kMaxStationRotationOffset = deg2rad(25.0);
 
   static constexpr double kExpectedTranslationError = 0.05;
   static constexpr double kExpectedDirectionError = deg2rad(5.0);
