@@ -122,7 +122,9 @@ private:
   void copy_to_read_buffer();
 
   /// Format base station ID as 2-digit zero-padded string
-  std::string format_base_station_id(size_t base_station) const;
+  /// @param station_id 1-based station ID (1-16)
+  /// @return Zero-padded string (e.g., "01", "02", etc.)
+  std::string format_base_station_id(size_t station_id) const;
 
   struct SensorAngles
   {
@@ -147,6 +149,8 @@ private:
 
   // base_station_data_ is written by callback (protected by mutex)
   // read_base_station_data_ is read by ros2_control (copied in read())
+  // Note: Arrays are 0-indexed, but protocol uses 1-based station IDs (1-16).
+  // Station ID N is stored at index (N-1).
   std::array<BaseStationData, NUM_BASE_STATIONS> base_station_data_;
   std::array<BaseStationData, NUM_BASE_STATIONS> read_base_station_data_;
 

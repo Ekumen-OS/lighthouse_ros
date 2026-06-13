@@ -188,10 +188,10 @@ hardware_interface::CallbackReturn LighthouseDeckHardware::on_deactivate(
 }
 
 std::string
-LighthouseDeckHardware::format_base_station_id(size_t base_station) const
+LighthouseDeckHardware::format_base_station_id(size_t station_id) const
 {
   std::ostringstream oss;
-  oss << std::setw(2) << std::setfill('0') << base_station;
+  oss << std::setw(2) << std::setfill('0') << station_id;
   return oss.str();
 }
 
@@ -207,9 +207,11 @@ LighthouseDeckHardware::export_state_interfaces()
     for (size_t base_station = 0; base_station < NUM_BASE_STATIONS;
       ++base_station)
     {
+      // base_station is 0-based array index, convert to 1-based station ID for interface name
+      size_t station_id = base_station + 1;
       std::string interface_name = name_ + "_sensor_" + std::to_string(sensor) +
         "_base_" +
-        format_base_station_id(base_station);
+        format_base_station_id(station_id);
 
       state_interfaces.emplace_back(
         hardware_interface::StateInterface(
@@ -226,9 +228,11 @@ LighthouseDeckHardware::export_state_interfaces()
   for (size_t base_station = 0; base_station < NUM_BASE_STATIONS;
     ++base_station)
   {
+    // base_station is 0-based array index, convert to 1-based station ID for interface name
+    size_t station_id = base_station + 1;
     state_interfaces.emplace_back(
       hardware_interface::StateInterface(
-        name_ + "_base_" + format_base_station_id(base_station), "timestamp",
+        name_ + "_base_" + format_base_station_id(station_id), "timestamp",
         &read_base_station_data_[base_station].timestamp));
   }
 
@@ -342,24 +346,27 @@ void LighthouseDeckHardware::bearing_callback(
 
   uint8_t base_station_id = sensor_bearings.base_station_id;
 
-  if (base_station_id >= NUM_BASE_STATIONS) {
+  // Convert 1-based station ID (protocol returns 1-16) to 0-based array index
+  if (base_station_id < 1 || base_station_id > NUM_BASE_STATIONS) {
     RCLCPP_WARN(
       rclcpp::get_logger("LighthouseDeckHardware"),
-      "Received data for invalid base station ID: %d",
-      base_station_id);
+      "Received data for invalid base station ID: %d (valid range: 1-%zu)",
+      base_station_id, NUM_BASE_STATIONS);
     return;
   }
 
+  size_t station_index = base_station_id - 1;
+
   for (size_t sensor_idx = 0; sensor_idx < NUM_SENSORS; ++sensor_idx) {
-    base_station_data_[base_station_id].sensors[sensor_idx].azimuth =
+    base_station_data_[station_index].sensors[sensor_idx].azimuth =
       sensor_bearings.sensor_angles[sensor_idx].azimuth;
-    base_station_data_[base_station_id].sensors[sensor_idx].elevation =
+    base_station_data_[station_index].sensors[sensor_idx].elevation =
       sensor_bearings.sensor_angles[sensor_idx].elevation;
   }
 
   auto now = std::chrono::steady_clock::now();
   auto duration = now.time_since_epoch();
-  base_station_data_[base_station_id].timestamp =
+  base_station_data_[station_index].timestamp =
     std::chrono::duration<double>(duration).count();
 }
 
