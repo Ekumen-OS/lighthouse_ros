@@ -33,18 +33,18 @@ protected:
       <param name="device">/dev/ttyUSB99</param>
       <param name="baudrate">19200</param>
     </hardware>
-    <sensor name="lighthouse_sensor_0_base_00">
-      <state_interface name="azimuth"/>
-      <state_interface name="elevation"/>
-    </sensor>
     <sensor name="lighthouse_sensor_0_base_01">
       <state_interface name="azimuth"/>
       <state_interface name="elevation"/>
     </sensor>
-    <sensor name="lighthouse_base_00">
-      <state_interface name="timestamp"/>
+    <sensor name="lighthouse_sensor_0_base_02">
+      <state_interface name="azimuth"/>
+      <state_interface name="elevation"/>
     </sensor>
     <sensor name="lighthouse_base_01">
+      <state_interface name="timestamp"/>
+    </sensor>
+    <sensor name="lighthouse_base_02">
       <state_interface name="timestamp"/>
     </sensor>
   </ros2_control>
