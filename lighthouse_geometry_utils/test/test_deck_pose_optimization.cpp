@@ -145,7 +145,15 @@ INSTANTIATE_TEST_SUITE_P(
       create_pose_facing_target({-0.5, 1.0, 2.0}, {0.0, 0.0, 0.0}),
       create_pose_facing_target({0.5, -1.0, 1.8}, {0.0, 0.0, 0.0}),
       create_pose_facing_target({1.5, 0.5, 1.6}, {0.0, 0.0, 0.0})},
-    /* description = */ "FourStationsSurrounding"}),
+    /* description = */ "FourStationsSurrounding"},
+
+    // Single station with deck 2.5m in front
+    DeckPoseScenario{
+    /* deck_pose = */
+    Sophus::SE3d{},
+    /* station_poses = */
+    {create_pose_facing_target({0.0, 0.0, 2.5}, {0.0, 0.0, 0.0})},
+    /* description = */ "SingleStationDeck25mInFront"}),
   [](const ::testing::TestParamInfo<DeckPoseScenario> & info) {
     return info.param.description;
   });
