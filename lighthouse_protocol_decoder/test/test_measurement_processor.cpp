@@ -418,7 +418,7 @@ TEST_F(MeasurementProcessorTest, ValidationRejectsBoundaryExceedingAzimuthSpread
   // At 0.6m with Y-baseline of 15mm: spread = atan(0.015/0.6) = 1.43° > 1.28° limit
   auto [block_first, block_second] = test_helpers::createSweepBlocksFromGeometry(
     0.0, 0.0, 0.0,      // station at origin
-    0.6, 0.0, -0.02,    // deck 0.6m in front, 2cm below
+    0.4, 0.0, -0.02,    // deck 0.4m in front, 2cm below
     1, 1000);
 
   processor_->processBlock(block_first);

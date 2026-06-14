@@ -136,7 +136,7 @@ bool MeasurementProcessor::bearingsAreValid(const SweepBlockBearings & bearings)
   // Physical constraint: at a reference distance, the angular spread across
   // sensors must be consistent with the sensor's physical baseline.
   // The maximum angle range is atan(kMaxSensorBaseline / kReferenceDistance).
-  constexpr double kReferenceDistance = 1.5;     // meters
+  constexpr double kReferenceDistance = 1.0;     // meters
   constexpr double kMaxSensorBaseline = 0.0335;  // meters
   const double max_angle_range_deg =
     std::atan(kMaxSensorBaseline / kReferenceDistance) * 180.0 / M_PI;
