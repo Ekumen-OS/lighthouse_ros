@@ -66,7 +66,7 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
   declare_parameter("buffer_duration", 2.5);
   buffer_duration_ = get_parameter("buffer_duration").as_double();
 
-  declare_parameter("min_samples_per_station", 10);
+  declare_parameter("min_samples_per_station", 3);
   min_samples_per_station_ = get_parameter("min_samples_per_station").as_int();
 
   subscription_ = create_subscription<LighthouseDeckMeasurement>(
@@ -215,9 +215,17 @@ void MapperUiNode::timer_callback()
       geo.station_poses, geo.station_ids);
 
     std::vector<lighthouse_geometry_utils::DeckPoseOptimization::Sample> deck_samples;
-    for (const auto & s : summarized_samples) {
-      deck_samples.push_back(
-        {s.elevation, s.azimuth, s.station_id});
+
+    // Sort summarized samples by timestamp (descending) and keep only the most recent
+    if (!summarized_samples.empty()) {
+      auto sorted_samples = summarized_samples;
+      std::sort(
+        sorted_samples.begin(), sorted_samples.end(),
+        [](const auto & a, const auto & b) { return a.latest_timestamp > b.latest_timestamp; });
+
+      // Use only the most recent sample (first after sorting descending)
+      const auto & most_recent = sorted_samples.front();
+      deck_samples.push_back({most_recent.elevation, most_recent.azimuth, most_recent.station_id});
     }
 
     if (deck_samples.empty()) {
@@ -547,6 +555,8 @@ std::vector<SummarizedStationData> MapperUiNode::summarize_buffer()
     r.sensor_2_elevation.push_back(ts.sample.elevation[2]);
     r.sensor_3_azimuth.push_back(ts.sample.azimuth[3]);
     r.sensor_3_elevation.push_back(ts.sample.elevation[3]);
+    // Track the latest timestamp for this station
+    r.latest_timestamp = ts.timestamp;
   }
 
   auto stats_of = [](std::vector<double> & v) -> std::tuple<double, double, double> {
@@ -592,6 +602,7 @@ std::vector<SummarizedStationData> MapperUiNode::summarize_buffer()
     sample.elevation = {s0_el_latest, s1_el_latest, s2_el_latest, s3_el_latest};
     sample.count = count;
     sample.spread = max_spread;
+    sample.latest_timestamp = readings.latest_timestamp.seconds();
     result.push_back(std::move(sample));
   }
 
@@ -653,6 +664,7 @@ void MapperUiNode::visualization_timer_callback()
       deck_samples.push_back({s.elevation, s.azimuth, s.station_id});
     }
     try {
+      // TODO(glpuga): not sure why I chose to limit here to one station.
       if (deck_samples.size() > 1) {
         deck_samples.resize(1);
       }

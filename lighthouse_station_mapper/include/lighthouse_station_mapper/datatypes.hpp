@@ -42,6 +42,8 @@ struct SummarizedStationData
   std::size_t count;
   /// Max minus min across all contributing raw angles (radians).
   double spread;
+  /// Timestamp of the latest sample in this summary (seconds since epoch).
+  double latest_timestamp;
 };
 
 /// A committed lighthouse sample: median readings for one station at

@@ -103,6 +103,8 @@ private:
     std::vector<double> sensor_3_azimuth;
     /// Elevation readings from sensor 3 (radians).
     std::vector<double> sensor_3_elevation;
+    /// Timestamp of the latest sample (ROS time).
+    rclcpp::Time latest_timestamp;
   };
 
   /// A single raw lighthouse measurement tagged with its receive time,
