@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Pose1
         - /TF1
       Splitter Ratio: 0.5
     Tree Height: 840
@@ -52,7 +53,6 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        keypoints: true
         samples: true
         stations: true
       Topic:
@@ -73,7 +73,7 @@ Visualization Manager:
       Name: Pose
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
-      Shape: Arrow
+      Shape: Axes
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -87,12 +87,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        keypoint_0:
-          Value: true
-        keypoint_1:
-          Value: true
-        keypoint_2:
-          Value: true
         map:
           Value: true
         sample_0:
@@ -105,6 +99,8 @@ Visualization Manager:
           Value: true
         sample_4:
           Value: true
+        sample_5:
+          Value: true
         station_0:
           Value: true
         station_1:
@@ -116,12 +112,6 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
-          keypoint_0:
-            {}
-          keypoint_1:
-            {}
-          keypoint_2:
-            {}
           sample_0:
             {}
           sample_1:
@@ -131,6 +121,8 @@ Visualization Manager:
           sample_3:
             {}
           sample_4:
+            {}
+          sample_5:
             {}
           station_0:
             {}
