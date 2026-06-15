@@ -91,11 +91,11 @@ TEST_F(SweepProcessorTest, InvalidSweepWithZeroValidNpolys) {
   ASSERT_EQ(sweeps_.size(), 0);
 }
 
-TEST_F(SweepProcessorTest, ValidSweepWithTwoValidNpolys) {
-  // 2 sensors have valid npoly (firmware accepts ≥1)
+TEST_F(SweepProcessorTest, ValidSweepWithThreeValidNpolys) {
+  // 3 sensors have valid npoly (firmware accepts ≥3)
   processor_->processFrame(createTestFrame(0, 0x00, 1000, 50000));
   processor_->processFrame(createTestFrame(1, 0x00, 1001));
-  processor_->processFrame(createTestFrame(2, 0x20, 1002));  // Invalid
+  processor_->processFrame(createTestFrame(2, 0x00, 1002));
   processor_->processFrame(createTestFrame(3, 0x20, 1003));  // Invalid
 
   ASSERT_EQ(sweeps_.size(), 1);
