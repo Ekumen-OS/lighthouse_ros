@@ -58,8 +58,6 @@ namespace
 {
 constexpr double kDegToRad = M_PI / 180.0;
 constexpr double kRadToDeg = 180.0 / M_PI;
-constexpr double kMinKeypointDistance = 0.05;  // 5cm minimum distance between keypoints
-constexpr double kColinearityThreshold = 0.1;  // Threshold for colinearity check
 }  // namespace
 
 MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
@@ -73,6 +71,9 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
 
   declare_parameter("min_samples_per_station", 3);
   min_samples_per_station_ = get_parameter("min_samples_per_station").as_int();
+
+  declare_parameter("lighthouse_frame", "lighthouse");
+  lighthouse_frame_ = get_parameter("lighthouse_frame").as_string();
 
   subscription_ = create_subscription<LighthouseDeckMeasurement>(
     "lighthouse", rclcpp::QoS(10).best_effort(),
@@ -90,9 +91,6 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
 
   deck_pose_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
     "mapper_deck_pose_samples", rclcpp::QoS(1).transient_local());
-
-  keypoint_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
-    "mapper_keypoints", rclcpp::QoS(1).transient_local());
 
   deck_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
     "mapper_deck_pose", rclcpp::QoS(10));
@@ -125,13 +123,6 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
           on_solve_button_callback();
         });
     });
-  renderer_->set_solve_keypoint_callback(
-    [this] {
-      command_queue_.enqueue(
-        [this] {
-          on_solve_keypoint_button_callback();
-        });
-    });
   renderer_->set_save_callback(
     [this] {
       command_queue_.enqueue(
@@ -151,20 +142,6 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
       command_queue_.enqueue(
         [this] {
           on_clear_samples_button_callback();
-        });
-    });
-  renderer_->set_set_keypoint_callback(
-    [this] {
-      command_queue_.enqueue(
-        [this] {
-          on_set_keypoint_button_callback();
-        });
-    });
-  renderer_->set_clear_origin_keypoints_callback(
-    [this] {
-      command_queue_.enqueue(
-        [this] {
-          on_clear_origin_keypoints_button_callback();
         });
     });
   renderer_->set_quit_callback(
@@ -307,24 +284,6 @@ void MapperUiNode::on_sample_button_callback()
 
 void MapperUiNode::on_solve_button_callback()
 {
-  solve_impl(false);
-}
-
-void MapperUiNode::on_solve_keypoint_button_callback()
-{
-  solve_impl(true);
-}
-
-void MapperUiNode::solve_impl(bool use_keypoints)
-{
-  if (use_keypoints && keypoints_.size() != 3) {
-    RCLCPP_WARN(
-      get_logger(), "Cannot solve with keypoints: need 3 keypoints, have %zu",
-      keypoints_.size());
-    renderer_->set_message("[Error] Set 3 keypoints before using keypoint-based solve");
-    return;
-  }
-
   try {
     if (samples_taken_.empty()) {
       RCLCPP_WARN(get_logger(), "No samples to solve. Take samples first.");
@@ -332,10 +291,9 @@ void MapperUiNode::solve_impl(bool use_keypoints)
       return;
     }
 
-    const std::string origin_method = use_keypoints ? "keypoints" : "first station";
     RCLCPP_INFO(
-      get_logger(), "Starting station geometry optimization with %zu samples (origin @%s)",
-      samples_taken_.size(), origin_method.c_str());
+      get_logger(), "Starting station geometry optimization with %zu samples",
+      samples_taken_.size());
     renderer_->set_message("Solving...");
 
     lighthouse_geometry_utils::StationGeometryOptimization optimizer;
@@ -345,25 +303,36 @@ void MapperUiNode::solve_impl(bool use_keypoints)
 
     auto result = optimizer.solve();
 
-    // Station 0 defines the raw-solver origin. When using keypoints, the
-    // keypoints were recorded in F1 (where station 0 is the origin), so
-    // re-anchor them back to the raw solver frame before applying the offset.
-    Sophus::SE3d reference_frame = result.station_poses[0];
-    if (use_keypoints) {
-      reference_frame = reference_frame * compute_keypoint_origin_in_current_frame();
+    // use the first deck pose to calculate the origin pose with respect ot the stations
+    lighthouse_geometry_utils::DeckPoseOptimization deck_optimizer(
+      result.station_poses, result.station_ids);
+
+    // get the deck pose id of the first sample to use only the samples of that deck pose
+    // for the optimization
+    const auto first_deck_pose_id = samples_taken_.front().deck_pose_id;
+    std::vector<lighthouse_geometry_utils::DeckPoseOptimization::Sample> deck_samples;
+    for (const auto & sample : samples_taken_) {
+      if (sample.deck_pose_id == first_deck_pose_id) {
+        deck_samples.push_back({sample.elevation, sample.azimuth, sample.station_id});
+      }
+    }
+    auto [deck_pose, deck_auto_cov] = deck_optimizer.solve(deck_samples);
+
+    // transform station poses so that the origin is now the deck pose of the first sample
+    std::vector<Sophus::SE3d> transformed_station_poses;
+    for (const auto & station_pose : result.station_poses) {
+      transformed_station_poses.push_back(deck_pose.inverse() * station_pose);
     }
 
-    for (Sophus::SE3d & pose : result.station_poses) {
-      pose = reference_frame.inverse() * pose;
-    }
+    result.station_poses = std::move(transformed_station_poses);
 
     station_geometry_result_ = result;
     renderer_->set_station_poses(result);
 
     RCLCPP_INFO(
-      get_logger(), "Optimization complete. Found poses for %zu stations, origin set by %s",
-      result.station_poses.size(), origin_method.c_str());
-    renderer_->set_message("[OK] Optimization complete, origin set by " + origin_method);
+      get_logger(), "Optimization complete. Found poses for %zu stations",
+      result.station_poses.size());
+    renderer_->set_message("[OK] Optimization complete");
   } catch (const std::exception & e) {
     RCLCPP_ERROR(get_logger(), "Optimization failed: %s", e.what());
     renderer_->set_message(std::string("[Error] Optimization failed: ") + e.what());
@@ -453,10 +422,13 @@ void MapperUiNode::check_pending_futures()
         auto response = future.get();
 
         if (response->success) {
-          RCLCPP_INFO(get_logger(), "Successfully updated localization node: %s", response->message.c_str());
+          RCLCPP_INFO(
+            get_logger(), "Successfully updated localization node: %s",
+            response->message.c_str());
           renderer_->set_message("[OK] Localization node updated");
         } else {
-          RCLCPP_WARN(get_logger(), "Failed to update localization node: %s", response->message.c_str());
+          RCLCPP_WARN(
+            get_logger(), "Failed to update localization node: %s", response->message.c_str());
           renderer_->set_message("[Error] " + response->message);
         }
       } catch (const std::exception & e) {
@@ -470,127 +442,12 @@ void MapperUiNode::check_pending_futures()
   }
 }
 
-void MapperUiNode::on_set_keypoint_button_callback()
-{
-  // Check if we have a valid deck pose
-  if (!current_deck_pose_.has_value()) {
-    renderer_->set_message("[Error] No deck pose available");
-    return;
-  }
-
-  // Check if we already have 3 keypoints
-  if (keypoints_.size() >= 3) {
-    renderer_->set_message("[Error] Too many keypoints, keypoint ignored");
-    return;
-  }
-
-  const auto & new_pose = current_deck_pose_.value();
-  const auto new_translation = new_pose.translation();
-
-  // Check if the new keypoint is too close to existing ones
-  for (size_t i = 0; i < keypoints_.size(); ++i) {
-    const auto & existing_translation = keypoints_[i].translation();
-    const double distance = (new_translation - existing_translation).norm();
-    if (distance < kMinKeypointDistance) {
-      renderer_->set_message(
-        "[Error] Keypoint too close to keypoint " + std::to_string(i) +
-        " (distance: " + std::to_string(distance * 100.0) + " cm)");
-      return;
-    }
-  }
-
-  // If adding a third keypoint, check for colinearity with first two
-  if (keypoints_.size() == 2) {
-    const auto v01 = (keypoints_[1].translation() - keypoints_[0].translation()).normalized();
-    const auto v02 = (new_translation - keypoints_[0].translation()).normalized();
-    const double cross_product_norm = v01.cross(v02).norm();
-    if (cross_product_norm < kColinearityThreshold) {
-      renderer_->set_message(
-        "[Error] Keypoints are colinear (cross product: " +
-        std::to_string(cross_product_norm) + ")");
-      return;
-    }
-  }
-
-  // Add the keypoint
-  keypoints_.push_back(new_pose);
-
-  // Set success message based on which keypoint was added
-  std::string message;
-  switch (keypoints_.size()) {
-    case 1:
-      message = "[OK] Origin keypoint set";
-      break;
-    case 2:
-      message = "[OK] X direction keypoint set";
-      break;
-    case 3:
-      message = "[OK] XY plane keypoint set — ready to solve with keypoints";
-      break;
-    default:
-      message = "[OK] Keypoint added";
-      break;
-  }
-
-  RCLCPP_INFO(
-    get_logger(), "Keypoint %zu added at position [%.3f, %.3f, %.3f]",
-    keypoints_.size(),
-    new_translation.x(), new_translation.y(), new_translation.z());
-  renderer_->set_message(message);
-}
-
-void MapperUiNode::on_clear_origin_keypoints_button_callback()
-{
-  keypoints_.clear();
-  RCLCPP_INFO(get_logger(), "Origin keypoints cleared");
-  renderer_->set_message("[OK] Origin keypoints cleared");
-}
-
-Sophus::SE3d MapperUiNode::compute_keypoint_origin_in_current_frame() const
-{
-  // This function should only be called when 3 keypoints are set
-  if (keypoints_.size() != 3) {
-    RCLCPP_ERROR(
-      get_logger(),
-      "compute_keypoint_origin_in_current_frame called without 3 keypoints (have %zu)",
-      keypoints_.size());
-    throw std::runtime_error("Not enough keypoints to determine the origin frame");
-  }
-
-  const Eigen::Vector3d & origin = keypoints_[0].translation();
-  const Eigen::Vector3d & point_x = keypoints_[1].translation();
-  const Eigen::Vector3d & point_plane = keypoints_[2].translation();
-
-  // X axis points from origin to second keypoint
-  const Eigen::Vector3d x_axis = (point_x - origin).normalized();
-
-  // Z axis is perpendicular to the plane defined by the 3 points
-  const Eigen::Vector3d v1 = point_x - origin;
-  const Eigen::Vector3d v2 = point_plane - origin;
-  const Eigen::Vector3d z_axis = v1.cross(v2).normalized();
-
-  // Y axis completes the right-handed frame
-  const Eigen::Vector3d y_axis = z_axis.cross(x_axis).normalized();
-
-  // Build rotation matrix from axes
-  Eigen::Matrix3d rotation;
-  rotation.col(0) = x_axis;
-  rotation.col(1) = y_axis;
-  rotation.col(2) = z_axis;
-
-  // Create SE3 transformation
-  Sophus::SE3d new_origin_in_current_frame(rotation, origin);
-
-  return new_origin_in_current_frame;
-}
-
 void MapperUiNode::on_clear_samples_button_callback()
 {
   sample_queue_.clear();
   samples_taken_.clear();
   station_geometry_result_.reset();
   current_deck_pose_.reset();
-  keypoints_.clear();
   next_deck_pose_id_ = 0;
   renderer_->set_current_samples(samples_taken_);
   renderer_->set_station_poses({});
@@ -749,22 +606,8 @@ void MapperUiNode::visualization_timer_callback()
     }
   }
 
-  // Keypoints are recorded in F1 (station 0 at origin). When a keypoint-based
-  // solve has been done, the world frame is the keypoint-origin frame, so
-  // transform the keypoints by the same reference_frame.inverse() that was
-  // applied to the station poses (= compute_keypoint_origin_in_current_frame().inverse()).
-  std::vector<Sophus::SE3d> transformed_keypoints;
-  if (keypoints_.size() == 3) {
-    const auto origin = compute_keypoint_origin_in_current_frame();
-    for (const auto & kp : keypoints_) {
-      transformed_keypoints.push_back(origin.inverse() * kp);
-    }
-  } else {
-    transformed_keypoints = keypoints_;
-  }
-
-  publish_markers(geo.station_poses, sample_poses, transformed_keypoints);
-  publish_transforms(geo.station_poses, sample_poses, transformed_keypoints);
+  publish_markers(geo.station_poses, sample_poses);
+  publish_transforms(geo.station_poses, sample_poses);
 }
 
 namespace
@@ -816,11 +659,9 @@ void add_sphere(
 
 void MapperUiNode::publish_markers(
   const std::vector<Sophus::SE3d> & station_poses,
-  const std::vector<Sophus::SE3d> & sample_poses,
-  const std::vector<Sophus::SE3d> & keypoints)
+  const std::vector<Sophus::SE3d> & sample_poses)
 {
   const auto stamp = now();
-  constexpr char kFrame[] = "map";
 
   // Publish station markers
   {
@@ -833,7 +674,8 @@ void MapperUiNode::publish_markers(
     // Stations — white sphere.
     for (std::size_t i = 0; i < station_poses.size(); ++i) {
       add_sphere(
-        markers, kFrame, stamp, "stations", static_cast<int>(i), station_poses[i], 1, 1, 1,
+        markers, lighthouse_frame_, stamp, "stations", static_cast<int>(i), station_poses[i], 1, 1,
+        1,
         0.15);
     }
     station_markers_pub_->publish(markers);
@@ -850,25 +692,10 @@ void MapperUiNode::publish_markers(
     // Samples — green sphere.
     for (std::size_t i = 0; i < sample_poses.size(); ++i) {
       add_sphere(
-        markers, kFrame, stamp, "samples", static_cast<int>(i), sample_poses[i], 0, 0.8f, 0, 0.15);
+        markers, lighthouse_frame_, stamp, "samples", static_cast<int>(i), sample_poses[i], 0, 0.8f,
+        0, 0.15);
     }
     deck_pose_markers_pub_->publish(markers);
-  }
-
-  // Publish keypoint markers
-  {
-    visualization_msgs::msg::MarkerArray markers;
-    // Delete all previous markers first.
-    visualization_msgs::msg::Marker del;
-    del.action = visualization_msgs::msg::Marker::DELETEALL;
-    markers.markers.push_back(del);
-
-    // Keypoints — yellow sphere only.
-    for (std::size_t i = 0; i < keypoints.size(); ++i) {
-      add_sphere(
-        markers, kFrame, stamp, "keypoints", static_cast<int>(i), keypoints[i], 1, 1, 0, 0.15);
-    }
-    keypoint_markers_pub_->publish(markers);
   }
 }
 
@@ -876,24 +703,23 @@ void MapperUiNode::publish_deck_pose(const Sophus::SE3d & pose)
 {
   geometry_msgs::msg::PoseStamped msg;
   msg.header.stamp = now();
-  msg.header.frame_id = "map";
+  msg.header.frame_id = lighthouse_frame_;
   msg.pose = se3_to_pose_msg(pose);
   deck_pose_pub_->publish(msg);
 }
 
 void MapperUiNode::publish_transforms(
   const std::vector<Sophus::SE3d> & station_poses,
-  const std::vector<Sophus::SE3d> & sample_poses,
-  const std::vector<Sophus::SE3d> & keypoints)
+  const std::vector<Sophus::SE3d> & sample_poses)
 {
   const auto stamp = now();
   std::vector<geometry_msgs::msg::TransformStamped> transforms;
 
-  auto make_tf = [&stamp](const std::string & child_frame, const Sophus::SE3d & pose)
+  auto make_tf = [this, &stamp](const std::string & child_frame, const Sophus::SE3d & pose)
     -> geometry_msgs::msg::TransformStamped {
       geometry_msgs::msg::TransformStamped tf;
       tf.header.stamp = stamp;
-      tf.header.frame_id = "map";
+      tf.header.frame_id = lighthouse_frame_;
       tf.child_frame_id = child_frame;
       const auto t = pose.translation();
       const auto q = pose.unit_quaternion();
@@ -913,10 +739,6 @@ void MapperUiNode::publish_transforms(
 
   for (std::size_t i = 0; i < sample_poses.size(); ++i) {
     transforms.push_back(make_tf("sample_" + std::to_string(i), sample_poses[i]));
-  }
-
-  for (std::size_t i = 0; i < keypoints.size(); ++i) {
-    transforms.push_back(make_tf("keypoint_" + std::to_string(i), keypoints[i]));
   }
 
   tf_broadcaster_->sendTransform(transforms);

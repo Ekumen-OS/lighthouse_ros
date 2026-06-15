@@ -128,13 +128,6 @@ public:
   void set_solve_callback(std::function<void()> cb);
 
   /**
-   * @brief Set the callback invoked when the Solve (origin @keypoint) button is pressed.
-   * Defaults to a no-op.
-   * @param cb Callback function to invoke.
-   */
-  void set_solve_keypoint_callback(std::function<void()> cb);
-
-  /**
    * @brief Set the callback invoked when the Save button is pressed.
    * Defaults to a no-op.
    * @param cb Callback function to invoke.
@@ -154,20 +147,6 @@ public:
    * @param cb Callback function to invoke.
    */
   void set_clear_samples_callback(std::function<void()> cb);
-
-  /**
-   * @brief Set the callback invoked when the Set keypoint button is pressed.
-   * Defaults to a no-op.
-   * @param cb Callback function to invoke.
-   */
-  void set_set_keypoint_callback(std::function<void()> cb);
-
-  /**
-   * @brief Set the callback invoked when the Clear origin keypoints button is pressed.
-   * Defaults to a no-op.
-   * @param cb Callback function to invoke.
-   */
-  void set_clear_origin_keypoints_callback(std::function<void()> cb);
 
   /**
    * @brief Set the callback invoked when the Quit button is pressed.
@@ -259,18 +238,12 @@ private:
     }};                                            ///< Sample button callback.
   std::function<void()> on_solve_{[] {
     }};                                            ///< Solve button callback.
-  std::function<void()> on_solve_keypoint_{[] {
-    }};                                            ///< Solve (origin @keypoint) button callback.
   std::function<void()> on_save_{[] {
     }};                                            ///< Save button callback.
   std::function<void()> on_update_map_node_{[] {
     }};                                            ///< Update map node button callback.
   std::function<void()> on_clear_samples_{[] {
     }};                                            ///< Clear Samples callback.
-  std::function<void()> on_set_keypoint_{[] {
-    }};                                            ///< Set keypoint button callback.
-  std::function<void()> on_clear_origin_keypoints_{[] {
-    }};                                            ///< Clear origin keypoints button callback.
   std::function<void()> on_quit_{[] {
     }};                                            ///< Quit button callback.
 
@@ -293,12 +266,9 @@ private:
   ftxui::ScreenInteractive screen_;     ///< FTXUI interactive screen instance.
   ftxui::Component btn_sample_;         ///< Sample button component.
   ftxui::Component btn_solve_;          ///< Solve button component.
-  ftxui::Component btn_solve_keypoint_;  ///< Solve (origin @keypoint) button component.
   ftxui::Component btn_save_;           ///< Save button component.
   ftxui::Component btn_update_map_node_;  ///< Update map node button component.
   ftxui::Component btn_clear_samples_;  ///< Clear Samples button component.
-  ftxui::Component btn_set_keypoint_;   ///< Set keypoint button component.
-  ftxui::Component btn_clear_origin_keypoints_;  ///< Clear origin keypoints button component.
   ftxui::Component btn_quit_;           ///< Quit button component.
   ftxui::Component button_bar_;         ///< Horizontal container for buttons.
   ftxui::Component layout_;             ///< Top-level layout component.

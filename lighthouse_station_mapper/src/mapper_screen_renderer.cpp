@@ -227,17 +227,10 @@ MapperScreenRenderer::MapperScreenRenderer()
     "The status bar must show READY TO SAMPLE before recording.",
     &focused_button_description_);
   btn_solve_ = make_button(
-    "Solve (origin @station)",
+    "Solve station poses",
     [this] {on_solve_();}, 3,
     "Compute station positions and orientations, placing station 0 at the coordinate origin. "
     "Requires at least two samples from different deck positions.",
-    &focused_button_description_);
-  btn_solve_keypoint_ = make_button(
-    "Solve (origin @keypoint)",
-    [this] {on_solve_keypoint_();}, 18,
-    "Compute station positions and orientations using 3 keypoints to define the world frame. "
-    "The first keypoint sets the origin, the second defines the +X direction, and the third "
-    "defines the XY plane. Requires at least two samples and all three keypoints.",
     &focused_button_description_);
   btn_save_ = make_button(
     "Save map", [this] {on_save_();}, std::string::npos,
@@ -247,21 +240,9 @@ MapperScreenRenderer::MapperScreenRenderer()
     "Update map node", [this] {on_update_map_node_();}, 0,
     "Send the current station poses to the localization node via the SetStationPoses service.",
     &focused_button_description_);
-  btn_set_keypoint_ = make_button(
-    "Set origin keypoint",
-    [this] {on_set_keypoint_();}, 4,
-    "Record the current deck pose as a keypoint for origin definition. "
-    "Three presses are needed: the 1st sets the origin, the 2nd points along +X, and the 3rd "
-    "defines the XY plane. Requires a prior solve (origin at station) so deck positions are "
-    "known. Use Clear origin keypoints to start over.",
-    &focused_button_description_);
   btn_clear_samples_ = make_button(
     "Clear samples", [this] {on_clear_samples_();}, 0,
     "Delete all recorded measurement samples and discard the current solution.",
-    &focused_button_description_);
-  btn_clear_origin_keypoints_ = make_button(
-    "Clear origin keypoints", [this] {on_clear_origin_keypoints_();}, 6,
-    "Remove all recorded origin keypoints and reset the keypoint-based frame definition.",
     &focused_button_description_);
   btn_quit_ = make_button(
     "Quit", [this] {on_quit_();}, 0,
@@ -272,12 +253,9 @@ MapperScreenRenderer::MapperScreenRenderer()
     {
       btn_sample_,
       btn_solve_,
-      btn_solve_keypoint_,
       btn_save_,
       btn_update_map_node_,
-      btn_set_keypoint_,
       btn_clear_samples_,
-      btn_clear_origin_keypoints_,
       btn_quit_,
     });
 
@@ -289,12 +267,9 @@ MapperScreenRenderer::MapperScreenRenderer()
       {
         btn_sample_->Render(),
         btn_solve_->Render(),
-        btn_solve_keypoint_->Render(),
         btn_save_->Render(),
         btn_update_map_node_->Render(),
-        btn_set_keypoint_->Render(),
         btn_clear_samples_->Render(),
-        btn_clear_origin_keypoints_->Render(),
         btn_quit_->Render(),
       });
       auto help_panel = ftxui::vbox(
@@ -323,21 +298,6 @@ MapperScreenRenderer::MapperScreenRenderer()
       if (event == ftxui::Event::Character('v') || event == ftxui::Event::Character('V')) {
         std::lock_guard<std::mutex> lock(data_mutex_);
         on_solve_();
-        return true;
-      }
-      if (event == ftxui::Event::Character('p') || event == ftxui::Event::Character('P')) {
-        std::lock_guard<std::mutex> lock(data_mutex_);
-        on_solve_keypoint_();
-        return true;
-      }
-      if (event == ftxui::Event::Character('k') || event == ftxui::Event::Character('K')) {
-        std::lock_guard<std::mutex> lock(data_mutex_);
-        on_set_keypoint_();
-        return true;
-      }
-      if (event == ftxui::Event::Character('o') || event == ftxui::Event::Character('O')) {
-        std::lock_guard<std::mutex> lock(data_mutex_);
-        on_clear_origin_keypoints_();
         return true;
       }
       if (event == ftxui::Event::Character('c') || event == ftxui::Event::Character('C')) {
@@ -519,12 +479,6 @@ void MapperScreenRenderer::set_solve_callback(std::function<void()> cb)
   on_solve_ = std::move(cb);
 }
 
-void MapperScreenRenderer::set_solve_keypoint_callback(std::function<void()> cb)
-{
-  std::lock_guard<std::mutex> lock(data_mutex_);
-  on_solve_keypoint_ = std::move(cb);
-}
-
 void MapperScreenRenderer::set_save_callback(std::function<void()> cb)
 {
   std::lock_guard<std::mutex> lock(data_mutex_);
@@ -541,18 +495,6 @@ void MapperScreenRenderer::set_clear_samples_callback(std::function<void()> cb)
 {
   std::lock_guard<std::mutex> lock(data_mutex_);
   on_clear_samples_ = std::move(cb);
-}
-
-void MapperScreenRenderer::set_set_keypoint_callback(std::function<void()> cb)
-{
-  std::lock_guard<std::mutex> lock(data_mutex_);
-  on_set_keypoint_ = std::move(cb);
-}
-
-void MapperScreenRenderer::set_clear_origin_keypoints_callback(std::function<void()> cb)
-{
-  std::lock_guard<std::mutex> lock(data_mutex_);
-  on_clear_origin_keypoints_ = std::move(cb);
 }
 
 void MapperScreenRenderer::set_quit_callback(std::function<void()> cb)

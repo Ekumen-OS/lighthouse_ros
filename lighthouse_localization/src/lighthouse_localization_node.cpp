@@ -25,7 +25,7 @@ LighthouseLocalizationNode::LighthouseLocalizationNode(const rclcpp::NodeOptions
   std::string stations_map_path = get_parameter("stations_map").as_string();
 
   // Declare and get parameter for map frame
-  declare_parameter("map_frame", "map");
+  declare_parameter("map_frame", "lighthouse");
   map_frame_ = get_parameter("map_frame").as_string();
 
   // Create subscription to lighthouse measurements
