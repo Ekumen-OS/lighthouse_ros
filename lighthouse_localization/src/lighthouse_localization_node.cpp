@@ -24,6 +24,10 @@ LighthouseLocalizationNode::LighthouseLocalizationNode(const rclcpp::NodeOptions
   declare_parameter("stations_map", "");
   std::string stations_map_path = get_parameter("stations_map").as_string();
 
+  // Declare and get parameter for map frame
+  declare_parameter("map_frame", "map");
+  map_frame_ = get_parameter("map_frame").as_string();
+
   // Create subscription to lighthouse measurements
   subscription_ = create_subscription<lighthouse_deck_msgs::msg::LighthouseDeckMeasurement>(
     "lighthouse", rclcpp::QoS(10).best_effort(),
@@ -108,7 +112,7 @@ void LighthouseLocalizationNode::lighthouse_callback(
     // Publish deck pose
     geometry_msgs::msg::PoseStamped pose_msg;
     pose_msg.header.stamp = msg->header.stamp;
-    pose_msg.header.frame_id = "map";
+    pose_msg.header.frame_id = map_frame_;
 
     const auto t = deck_pose.translation();
     const auto q = deck_pose.unit_quaternion();
