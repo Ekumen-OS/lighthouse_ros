@@ -137,10 +137,10 @@ DecodeResult OOTXFrameDecoder::tryDecodeFrame()
     const auto bit_offset = word_idx * 17;
     const auto word = loadUint16MSBFirst(bit_buffer_, bit_offset, 16);
 
-    // Convert word to bytes (little-endian)
-    payload.push_back(static_cast<std::uint8_t>(word & 0xFF));
+    // Convert word to bytes (high byte first)
+    payload.push_back(static_cast<std::uint8_t>((word >> 8) & 0xFF));
     if (payload.size() < payload_length) {
-      payload.push_back(static_cast<std::uint8_t>((word >> 8) & 0xFF));
+      payload.push_back(static_cast<std::uint8_t>(word & 0xFF));
     }
   }
 

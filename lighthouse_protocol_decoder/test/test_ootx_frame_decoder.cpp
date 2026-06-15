@@ -94,8 +94,8 @@ TEST_F(OOTXFrameDecoderTest, ValidFrameDecoding) {
   // 2. Length (2 in little-endian byte order)
   add_word_le(0x0002);
 
-  // 3. Data (0xAB, 0xCD as little-endian word: 0xCDAB)
-  add_word(0xCDAB);
+  // 3. Data (0xAB, 0xCD sent MSB-first)
+  add_word(0xABCD);
 
   // 4. CRC32 lower 16 bits
   add_word_le(expected_crc & 0xFFFF);
@@ -174,7 +174,7 @@ TEST_F(OOTXFrameDecoderTest, CRCMismatchRejected) {
 
   add_word(0x0000);    // Preamble
   add_word_le(0x0002);  // Length = 2
-  add_word(0xCDAB);    // Data
+  add_word(0xABCD);    // Data
   add_word_le(0x1234);  // Wrong CRC lower
   add_word_le(0x5678);  // Wrong CRC upper
 
@@ -215,7 +215,7 @@ TEST_F(OOTXFrameDecoderTest, ValidFrameDecodedAfterCRCMismatch) {
 
   add_word(0x0000);                             // Preamble
   add_word_le(0x0002);                          // Length = 2
-  add_word(0xCDAB);                             // Data
+  add_word(0xABCD);                             // Data
   add_word_le(expected_crc & 0xFFFF);           // CRC lower
   add_word_le((expected_crc >> 16) & 0xFFFF);   // CRC upper
 
