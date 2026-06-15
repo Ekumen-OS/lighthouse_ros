@@ -85,6 +85,9 @@ private:
 
   /// Flag indicating whether station poses have been configured.
   bool station_poses_configured_{false};
+
+  /// Map frame name for published poses.
+  std::string map_frame_;
 };
 
 }  // namespace lighthouse_localization
