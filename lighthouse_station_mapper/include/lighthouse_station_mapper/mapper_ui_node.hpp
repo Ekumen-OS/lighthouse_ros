@@ -168,21 +168,6 @@ private:
   void on_solve_button_callback();
 
   /**
-   * @brief Handler for the Solve (origin @keypoint) button.
-   *
-   * Runs StationGeometryOptimization on samples_taken_ using keypoints as reference frame,
-   * and pushes results to the UI. Requires exactly 3 keypoints to be set.
-   */
-  void on_solve_keypoint_button_callback();
-
-  /**
-   * @brief Shared implementation for both solve callbacks.
-   * @param use_keypoints If true, requires 3 keypoints and uses them to define the
-   *        origin; if false, uses the first station pose as the origin.
-   */
-  void solve_impl(bool use_keypoints);
-
-  /**
    * @brief Handler for the Save button.
    *
    * Persists optimization results to disk. Not yet implemented.
@@ -212,21 +197,6 @@ private:
   void on_clear_samples_button_callback();
 
   /**
-   * @brief Handler for the Set keypoint button.
-   *
-   * Records the current deck pose as a keypoint for coordinate frame definition.
-   * Allows up to 3 keypoints to be stored.
-   */
-  void on_set_keypoint_button_callback();
-
-  /**
-   * @brief Handler for the Clear origin keypoints button.
-   *
-   * Clears all stored keypoints.
-   */
-  void on_clear_origin_keypoints_button_callback();
-
-  /**
    * @brief Handler for the Quit button.
    *
    * Sets quit_requested_ to true, signaling the application to terminate.
@@ -234,18 +204,15 @@ private:
   void on_quit_button_callback();
 
   /**
-   * @brief Publish a MarkerArray visualizing station poses, sample poses, and keypoints.
+   * @brief Publish a MarkerArray visualizing station poses and sample poses.
    * Stations are rendered as a white sphere with an RGB triad.
    * Samples are rendered as green spheres with an RGB triad.
-   * Keypoints are rendered as yellow spheres.
    * @param station_poses Station SE3 poses (from the last solve result).
    * @param sample_poses  One representative SE3 pose per sample position.
-   * @param keypoints     Stored origin keypoints.
    */
   void publish_markers(
     const std::vector<Sophus::SE3d> & station_poses,
-    const std::vector<Sophus::SE3d> & sample_poses,
-    const std::vector<Sophus::SE3d> & keypoints);
+    const std::vector<Sophus::SE3d> & sample_poses);
 
   /**
    * @brief Publish the current deck pose as a geometry_msgs/PoseStamped.
@@ -254,27 +221,14 @@ private:
   void publish_deck_pose(const Sophus::SE3d & pose);
 
   /**
-   * @brief Broadcast TF transforms for station poses, sample poses, and keypoints.
+   * @brief Broadcast TF transforms for station poses and sample poses.
    * Uses the same set of elements as publish_markers().
    * @param station_poses Station SE3 poses (from the last solve result).
    * @param sample_poses  One representative SE3 pose per sample position.
-   * @param keypoints     Stored origin keypoints.
    */
   void publish_transforms(
     const std::vector<Sophus::SE3d> & station_poses,
-    const std::vector<Sophus::SE3d> & sample_poses,
-    const std::vector<Sophus::SE3d> & keypoints);
-
-  /**
-   * @brief Compute reference frame transformation from keypoints.
-   *
-   * If 3 keypoints are set: origin at keypoint[0], X axis toward keypoint[1],
-   * Z axis perpendicular to the plane defined by the 3 points.
-   * If no keypoints: uses first station pose as origin.
-   *
-   * @return T_world_ref: pose of the reference frame in world coordinates.
-   */
-  Sophus::SE3d compute_keypoint_origin_in_current_frame() const;
+    const std::vector<Sophus::SE3d> & sample_poses);
 
   /**
    * @brief Remove entries from sample_queue_ older than buffer_duration_.
@@ -333,9 +287,6 @@ private:
   /// Current deck pose estimate (if available).
   std::optional<Sophus::SE3d> current_deck_pose_;
 
-  /// Stored keypoints for defining coordinate frame (0-3 poses).
-  std::vector<Sophus::SE3d> keypoints_;
-
   /// Monotonically increasing counter for deck pose IDs.
   DeckPoseId next_deck_pose_id_{0};
 
@@ -355,13 +306,10 @@ private:
   /// Publisher for RViz MarkerArray (deck pose samples).
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr deck_pose_markers_pub_;
 
-  /// Publisher for RViz MarkerArray (keypoints).
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr keypoint_markers_pub_;
-
   /// Publisher for the current deck pose.
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr deck_pose_pub_;
 
-  /// TF transform broadcaster for station, sample, and keypoint frames.
+  /// TF transform broadcaster for station and sample frames.
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
   /// Periodic timer that drains the command queue and refreshes the UI.
@@ -376,7 +324,10 @@ private:
 
   /// Pending future for SetStationPoses service call.
   std::optional<rclcpp::Client<lighthouse_station_mapper_msgs::srv::SetStationPoses>::SharedFuture>
-    pending_set_station_poses_future_;
+  pending_set_station_poses_future_;
+
+  /// Lighthouse frame name for published poses and markers.
+  std::string lighthouse_frame_;
 };
 
 }  // namespace lighthouse_station_mapper
