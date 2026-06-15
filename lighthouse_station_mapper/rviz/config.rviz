@@ -6,9 +6,9 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Pose1
-        - /TF1
-      Splitter Ratio: 0.5
+        - /Markers1
+        - /Markers1/Keypoint markers1
+      Splitter Ratio: 0.6882352828979492
     Tree Height: 840
   - Class: rviz_common/Selection
     Name: Selection
@@ -49,19 +49,46 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Class: rviz_default_plugins/MarkerArray
+    - Class: rviz_common/Group
+      Displays:
+        - Class: rviz_default_plugins/MarkerArray
+          Enabled: true
+          Name: Deck pose markers
+          Namespaces:
+            samples: true
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /deck_pose_markers
+          Value: true
+        - Class: rviz_default_plugins/MarkerArray
+          Enabled: true
+          Name: Keypoint markers
+          Namespaces:
+            keypoints: true
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /keypoint_markers
+          Value: true
+        - Class: rviz_default_plugins/MarkerArray
+          Enabled: true
+          Name: Station markers
+          Namespaces:
+            stations: true
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /station_markers
+          Value: true
       Enabled: true
-      Name: MarkerArray
-      Namespaces:
-        samples: true
-        stations: true
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /lighthouse_markers
-      Value: true
+      Name: Markers
     - Alpha: 1
       Axes Length: 1
       Axes Radius: 0.10000000149011612
@@ -70,7 +97,7 @@ Visualization Manager:
       Enabled: true
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
-      Name: Pose
+      Name: Deck pose
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
       Shape: Axes
@@ -87,6 +114,12 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        keypoint_0:
+          Value: true
+        keypoint_1:
+          Value: true
+        keypoint_2:
+          Value: true
         map:
           Value: true
         sample_0:
@@ -95,15 +128,7 @@ Visualization Manager:
           Value: true
         sample_2:
           Value: true
-        sample_3:
-          Value: true
-        sample_4:
-          Value: true
-        sample_5:
-          Value: true
         station_0:
-          Value: true
-        station_1:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -112,21 +137,19 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
+          keypoint_0:
+            {}
+          keypoint_1:
+            {}
+          keypoint_2:
+            {}
           sample_0:
             {}
           sample_1:
             {}
           sample_2:
             {}
-          sample_3:
-            {}
-          sample_4:
-            {}
-          sample_5:
-            {}
           station_0:
-            {}
-          station_1:
             {}
       Update Interval: 0
       Value: true
@@ -176,7 +199,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 10
+      Distance: 8.961331367492676
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -191,10 +214,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.06979703158140182
+      Pitch: 0.4147971272468567
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.3935743570327759
+      Yaw: 3.6185851097106934
     Saved: ~
 Window Geometry:
   Displays:

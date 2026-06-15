@@ -80,8 +80,14 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
       timer_callback();
     });
 
-  marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
-    "lighthouse_markers", rclcpp::QoS(1).transient_local());
+  station_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
+    "station_markers", rclcpp::QoS(1).transient_local());
+
+  deck_pose_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
+    "deck_pose_markers", rclcpp::QoS(1).transient_local());
+
+  keypoint_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
+    "keypoint_markers", rclcpp::QoS(1).transient_local());
 
   deck_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
     "deck_pose", rclcpp::QoS(10));
@@ -745,35 +751,57 @@ void MapperUiNode::publish_markers(
   const std::vector<Sophus::SE3d> & sample_poses,
   const std::vector<Sophus::SE3d> & keypoints)
 {
-  visualization_msgs::msg::MarkerArray markers;
   const auto stamp = now();
   constexpr char kFrame[] = "map";
 
-  // Delete all previous markers first.
-  visualization_msgs::msg::Marker del;
-  del.action = visualization_msgs::msg::Marker::DELETEALL;
-  markers.markers.push_back(del);
+  // Publish station markers
+  {
+    visualization_msgs::msg::MarkerArray markers;
+    // Delete all previous markers first.
+    visualization_msgs::msg::Marker del;
+    del.action = visualization_msgs::msg::Marker::DELETEALL;
+    markers.markers.push_back(del);
 
-  // Stations — white sphere.
-  for (std::size_t i = 0; i < station_poses.size(); ++i) {
-    add_sphere(
-      markers, kFrame, stamp, "stations", static_cast<int>(i), station_poses[i], 1, 1, 1,
-      0.15);
+    // Stations — white sphere.
+    for (std::size_t i = 0; i < station_poses.size(); ++i) {
+      add_sphere(
+        markers, kFrame, stamp, "stations", static_cast<int>(i), station_poses[i], 1, 1, 1,
+        0.15);
+    }
+    station_markers_pub_->publish(markers);
   }
 
-  // Samples — green sphere.
-  for (std::size_t i = 0; i < sample_poses.size(); ++i) {
-    add_sphere(
-      markers, kFrame, stamp, "samples", static_cast<int>(i), sample_poses[i], 0, 0.8f, 0, 0.15);
+  // Publish deck pose (sample) markers
+  {
+    visualization_msgs::msg::MarkerArray markers;
+    // Delete all previous markers first.
+    visualization_msgs::msg::Marker del;
+    del.action = visualization_msgs::msg::Marker::DELETEALL;
+    markers.markers.push_back(del);
+
+    // Samples — green sphere.
+    for (std::size_t i = 0; i < sample_poses.size(); ++i) {
+      add_sphere(
+        markers, kFrame, stamp, "samples", static_cast<int>(i), sample_poses[i], 0, 0.8f, 0, 0.15);
+    }
+    deck_pose_markers_pub_->publish(markers);
   }
 
-  // Keypoints — yellow sphere only.
-  for (std::size_t i = 0; i < keypoints.size(); ++i) {
-    add_sphere(
-      markers, kFrame, stamp, "keypoints", static_cast<int>(i), keypoints[i], 1, 1, 0, 0.15);
-  }
+  // Publish keypoint markers
+  {
+    visualization_msgs::msg::MarkerArray markers;
+    // Delete all previous markers first.
+    visualization_msgs::msg::Marker del;
+    del.action = visualization_msgs::msg::Marker::DELETEALL;
+    markers.markers.push_back(del);
 
-  marker_pub_->publish(markers);
+    // Keypoints — yellow sphere only.
+    for (std::size_t i = 0; i < keypoints.size(); ++i) {
+      add_sphere(
+        markers, kFrame, stamp, "keypoints", static_cast<int>(i), keypoints[i], 1, 1, 0, 0.15);
+    }
+    keypoint_markers_pub_->publish(markers);
+  }
 }
 
 void MapperUiNode::publish_deck_pose(const Sophus::SE3d & pose)

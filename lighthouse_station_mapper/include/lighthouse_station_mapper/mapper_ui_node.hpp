@@ -334,8 +334,14 @@ private:
   rclcpp::Subscription<lighthouse_deck_msgs::msg::LighthouseDeckMeasurement>::SharedPtr
     subscription_;
 
-  /// Publisher for RViz MarkerArray (stations, samples, keypoints).
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+  /// Publisher for RViz MarkerArray (stations).
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr station_markers_pub_;
+
+  /// Publisher for RViz MarkerArray (deck pose samples).
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr deck_pose_markers_pub_;
+
+  /// Publisher for RViz MarkerArray (keypoints).
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr keypoint_markers_pub_;
 
   /// Publisher for the current deck pose.
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr deck_pose_pub_;
