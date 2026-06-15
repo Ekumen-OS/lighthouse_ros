@@ -92,9 +92,9 @@ bool SweepProcessor::validateSweep() const
     }
   }
 
-  if (valid_npolys < 1) {
+  if (valid_npolys < 3) {
     logger_->debug(
-      "Sweep discarded: need at least 1 sensor with valid polynomial, got " +
+      "Sweep discarded: need at least 3 sensor with valid polynomial, got " +
       std::to_string(valid_npolys));
     return false;
   }
