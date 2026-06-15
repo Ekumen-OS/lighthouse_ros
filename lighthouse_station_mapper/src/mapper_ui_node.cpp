@@ -39,6 +39,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include "lighthouse_deck_utils/utils.hpp"
 #include "lighthouse_geometry_utils/deck_pose_optimization.hpp"
 #include "lighthouse_geometry_utils/station_geometry_optimization.hpp"
 #include "lighthouse_station_mapper/datatypes.hpp"
@@ -81,16 +82,16 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
     });
 
   station_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
-    "station_markers", rclcpp::QoS(1).transient_local());
+    "mapper_station_markers", rclcpp::QoS(1).transient_local());
 
   deck_pose_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
-    "deck_pose_markers", rclcpp::QoS(1).transient_local());
+    "mapper_deck_pose_samples", rclcpp::QoS(1).transient_local());
 
   keypoint_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
-    "keypoint_markers", rclcpp::QoS(1).transient_local());
+    "mapper_keypoints", rclcpp::QoS(1).transient_local());
 
   deck_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
-    "deck_pose", rclcpp::QoS(10));
+    "mapper_deck_pose", rclcpp::QoS(10));
 
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
@@ -227,7 +228,7 @@ void MapperUiNode::timer_callback()
       auto sorted_samples = summarized_samples;
       std::sort(
         sorted_samples.begin(), sorted_samples.end(),
-        [](const auto & a, const auto & b) { return a.latest_timestamp > b.latest_timestamp; });
+        [](const auto & a, const auto & b) {return a.latest_timestamp > b.latest_timestamp;});
 
       // Use only the most recent sample (first after sorting descending)
       const auto & most_recent = sorted_samples.front();
@@ -370,36 +371,15 @@ void MapperUiNode::on_save_button_callback()
   filename_oss << "lighthouse_map_" << std::put_time(&tm_buf, "%Y%m%d_%H%M%S") << ".csv";
   const std::string filename = filename_oss.str();
 
-  std::ofstream file(filename);
-  if (!file.is_open()) {
-    RCLCPP_ERROR(get_logger(), "Failed to open file for writing: %s", filename.c_str());
-    renderer_->set_message("[Error] Could not open file: " + filename);
-    return;
-  }
-
-  // Header
-  file << "station_id,x,y,z,qx,qy,qz,qw\n";
-  file << std::fixed << std::setprecision(9);
-
   const auto & result = station_geometry_result_.value();
-  for (std::size_t i = 0; i < result.station_ids.size(); ++i) {
-    const auto & pose = result.station_poses[i];
-    const auto t_vec = pose.translation();
-    const auto q = pose.unit_quaternion();
-    file
-      << result.station_ids[i] << ","
-      << t_vec.x() << "," << t_vec.y() << "," << t_vec.z() << ","
-      << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << "\n";
+  if (lighthouse_deck_utils::save_stations_map(
+      filename, result.station_poses,
+      result.station_ids))
+  {
+    renderer_->set_message("[OK] Map saved to " + filename);
+  } else {
+    renderer_->set_message("[Error] Failed to save map to " + filename);
   }
-
-  if (!file) {
-    RCLCPP_ERROR(get_logger(), "Error while writing file: %s", filename.c_str());
-    renderer_->set_message("[Error] Write error on file: " + filename);
-    return;
-  }
-
-  RCLCPP_INFO(get_logger(), "Station map saved to %s", filename.c_str());
-  renderer_->set_message("[OK] Map saved to " + filename);
 }
 
 void MapperUiNode::on_set_keypoint_button_callback()

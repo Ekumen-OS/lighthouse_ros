@@ -1,21 +1,22 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>lighthouse_deck_utils</name>
+  <name>lighthouse_localization</name>
   <version>0.1.0</version>
-  <description>Utility classes for Lighthouse Deck packages</description>
+  <description>Lighthouse-based localization node</description>
   <maintainer email="glpuga@ekumenlabs.com">Gerardo Puga</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>asio_cmake_module</depend>
-  <depend>asio</depend>
-  <depend>rclcpp</depend>
+  <depend>lighthouse_deck_msgs</depend>
+  <depend>lighthouse_deck_utils</depend>
   <depend>lighthouse_geometry_utils</depend>
+  <depend>lighthouse_station_mapper_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>rclcpp</depend>
   <depend>sophus</depend>
 
-  <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

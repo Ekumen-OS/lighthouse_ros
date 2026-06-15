@@ -52,6 +52,14 @@ def generate_launch_description():
         prefix="xterm -geometry 160x50 -fa 'Monospace' -fs 12 -e",
     )
 
+    localization_node = Node(
+        package="lighthouse_localization",
+        namespace="",
+        output="screen",
+        executable="lighthouse_localization",
+        arguments=["--ros-args", "--log-level", "INFO"],
+    )
+
     # Shutdown launch when mapper node exits
     shutdown_on_mapper_exit = RegisterEventHandler(
         OnProcessExit(
@@ -64,6 +72,7 @@ def generate_launch_description():
         [
             use_rviz_arg,
             mapper_node,
+            localization_node,
             rviz_node,
             shutdown_on_mapper_exit,
         ]
