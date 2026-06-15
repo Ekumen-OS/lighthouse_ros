@@ -29,6 +29,7 @@ find_package(rclcpp REQUIRED)
 find_package(lighthouse_deck_msgs REQUIRED)
 find_package(lighthouse_deck_utils REQUIRED)
 find_package(lighthouse_geometry_utils REQUIRED)
+find_package(lighthouse_station_mapper_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
@@ -83,6 +84,7 @@ ament_target_dependencies(mapper_ui
   lighthouse_deck_msgs
   lighthouse_deck_utils
   lighthouse_geometry_utils
+  lighthouse_station_mapper_msgs
   tf2_ros
   visualization_msgs
 )

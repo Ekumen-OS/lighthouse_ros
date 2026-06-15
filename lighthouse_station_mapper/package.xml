@@ -12,6 +12,7 @@
   <depend>lighthouse_deck_msgs</depend>
   <depend>lighthouse_deck_utils</depend>
   <depend>lighthouse_geometry_utils</depend>
+  <depend>lighthouse_station_mapper_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>rclcpp</depend>
   <depend>tf2_ros</depend>

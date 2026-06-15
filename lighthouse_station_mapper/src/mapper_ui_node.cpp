@@ -21,10 +21,12 @@
 #include <chrono>
 #include <ctime>
 #include <fstream>
+#include <future>
 #include <iomanip>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <sstream>
 #include <string>
@@ -34,6 +36,8 @@
 #include <vector>
 
 #include <lighthouse_deck_msgs/msg/lighthouse_deck_measurement.hpp>
+#include <lighthouse_station_mapper_msgs/msg/station_pose.hpp>
+#include <lighthouse_station_mapper_msgs/srv/set_station_poses.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -100,6 +104,9 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
       visualization_timer_callback();
     });
 
+  set_station_poses_client_ = create_client<lighthouse_station_mapper_msgs::srv::SetStationPoses>(
+    "set_station_poses");
+
   // The renderer runs its event loop on a background thread. Instead of
   // calling node methods directly (which would race with the ROS executor),
   // each callback enqueues a command using the thread-safe command queue.
@@ -130,6 +137,13 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
       command_queue_.enqueue(
         [this] {
           on_save_button_callback();
+        });
+    });
+  renderer_->set_update_map_node_callback(
+    [this] {
+      command_queue_.enqueue(
+        [this] {
+          on_update_map_node_button_callback();
         });
     });
   renderer_->set_clear_samples_callback(
@@ -205,6 +219,8 @@ void MapperUiNode::process_command_queue()
 void MapperUiNode::timer_callback()
 {
   prune_old_samples();
+
+  check_pending_futures();
 
   process_command_queue();
 
@@ -379,6 +395,78 @@ void MapperUiNode::on_save_button_callback()
     renderer_->set_message("[OK] Map saved to " + filename);
   } else {
     renderer_->set_message("[Error] Failed to save map to " + filename);
+  }
+}
+
+void MapperUiNode::on_update_map_node_button_callback()
+{
+  if (!station_geometry_result_.has_value()) {
+    RCLCPP_WARN(get_logger(), "No solution to send to localization node");
+    renderer_->set_message("[Error] No solution available — solve first");
+    return;
+  }
+
+  // Check if service is available
+  if (!set_station_poses_client_->service_is_ready()) {
+    RCLCPP_WARN(get_logger(), "SetStationPoses service is not available");
+    renderer_->set_message("[Error] Localization node service not available");
+    return;
+  }
+
+  const auto & result = station_geometry_result_.value();
+
+  // Build service request
+  auto request = std::make_shared<lighthouse_station_mapper_msgs::srv::SetStationPoses::Request>();
+  for (std::size_t i = 0; i < result.station_ids.size(); ++i) {
+    lighthouse_station_mapper_msgs::msg::StationPose station_pose_msg;
+    station_pose_msg.station_id = result.station_ids[i];
+
+    const auto & pose = result.station_poses[i];
+    const auto t = pose.translation();
+    const auto q = pose.unit_quaternion();
+
+    station_pose_msg.pose.position.x = t.x();
+    station_pose_msg.pose.position.y = t.y();
+    station_pose_msg.pose.position.z = t.z();
+    station_pose_msg.pose.orientation.x = q.x();
+    station_pose_msg.pose.orientation.y = q.y();
+    station_pose_msg.pose.orientation.z = q.z();
+    station_pose_msg.pose.orientation.w = q.w();
+
+    request->station_poses.push_back(station_pose_msg);
+  }
+
+  // Call service asynchronously and store the future
+  pending_set_station_poses_future_ = set_station_poses_client_->async_send_request(request);
+  renderer_->set_message("[...] Sending station poses to localization node...");
+}
+
+void MapperUiNode::check_pending_futures()
+{
+  // Check if there's a pending SetStationPoses service call
+  if (pending_set_station_poses_future_.has_value()) {
+    auto & future = pending_set_station_poses_future_.value();
+
+    // Check if the future is ready (non-blocking)
+    if (future.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+      try {
+        auto response = future.get();
+
+        if (response->success) {
+          RCLCPP_INFO(get_logger(), "Successfully updated localization node: %s", response->message.c_str());
+          renderer_->set_message("[OK] Localization node updated");
+        } else {
+          RCLCPP_WARN(get_logger(), "Failed to update localization node: %s", response->message.c_str());
+          renderer_->set_message("[Error] " + response->message);
+        }
+      } catch (const std::exception & e) {
+        RCLCPP_ERROR(get_logger(), "Exception while getting service response: %s", e.what());
+        renderer_->set_message("[Error] Service call failed: " + std::string(e.what()));
+      }
+
+      // Clear the future now that we've processed it
+      pending_set_station_poses_future_.reset();
+    }
   }
 }
 

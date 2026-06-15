@@ -243,6 +243,10 @@ MapperScreenRenderer::MapperScreenRenderer()
     "Save map", [this] {on_save_();}, std::string::npos,
     "Write the current station geometry solution to disk as a map file.",
     &focused_button_description_);
+  btn_update_map_node_ = make_button(
+    "Update map node", [this] {on_update_map_node_();}, 0,
+    "Send the current station poses to the localization node via the SetStationPoses service.",
+    &focused_button_description_);
   btn_set_keypoint_ = make_button(
     "Set origin keypoint",
     [this] {on_set_keypoint_();}, 4,
@@ -270,6 +274,7 @@ MapperScreenRenderer::MapperScreenRenderer()
       btn_solve_,
       btn_solve_keypoint_,
       btn_save_,
+      btn_update_map_node_,
       btn_set_keypoint_,
       btn_clear_samples_,
       btn_clear_origin_keypoints_,
@@ -286,6 +291,7 @@ MapperScreenRenderer::MapperScreenRenderer()
         btn_solve_->Render(),
         btn_solve_keypoint_->Render(),
         btn_save_->Render(),
+        btn_update_map_node_->Render(),
         btn_set_keypoint_->Render(),
         btn_clear_samples_->Render(),
         btn_clear_origin_keypoints_->Render(),
@@ -523,6 +529,12 @@ void MapperScreenRenderer::set_save_callback(std::function<void()> cb)
 {
   std::lock_guard<std::mutex> lock(data_mutex_);
   on_save_ = std::move(cb);
+}
+
+void MapperScreenRenderer::set_update_map_node_callback(std::function<void()> cb)
+{
+  std::lock_guard<std::mutex> lock(data_mutex_);
+  on_update_map_node_ = std::move(cb);
 }
 
 void MapperScreenRenderer::set_clear_samples_callback(std::function<void()> cb)
