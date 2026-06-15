@@ -29,6 +29,7 @@
 #include <vector>
 
 #include <lighthouse_deck_msgs/msg/lighthouse_deck_measurement.hpp>
+#include <lighthouse_station_mapper_msgs/srv/set_station_poses.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -187,6 +188,20 @@ private:
    * Persists optimization results to disk. Not yet implemented.
    */
   void on_save_button_callback();
+
+  /**
+   * @brief Handler for the Update map node button.
+   *
+   * Sends the current station poses to the localization node via SetStationPoses service.
+   */
+  void on_update_map_node_button_callback();
+
+  /**
+   * @brief Check pending service call futures and handle responses.
+   *
+   * Called from timer_callback to process any pending async service calls.
+   */
+  void check_pending_futures();
 
   /**
    * @brief Handler for the Clear Samples button.
@@ -354,6 +369,14 @@ private:
 
   /// 1 Hz timer that re-solves sample poses and publishes visualization.
   rclcpp::TimerBase::SharedPtr visualization_timer_;
+
+  /// Service client to set station poses in the localization node.
+  rclcpp::Client<lighthouse_station_mapper_msgs::srv::SetStationPoses>::SharedPtr
+    set_station_poses_client_;
+
+  /// Pending future for SetStationPoses service call.
+  std::optional<rclcpp::Client<lighthouse_station_mapper_msgs::srv::SetStationPoses>::SharedFuture>
+    pending_set_station_poses_future_;
 };
 
 }  // namespace lighthouse_station_mapper

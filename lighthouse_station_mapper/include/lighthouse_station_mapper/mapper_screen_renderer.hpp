@@ -142,6 +142,13 @@ public:
   void set_save_callback(std::function<void()> cb);
 
   /**
+   * @brief Set the callback invoked when the Update map node button is pressed.
+   * Defaults to a no-op.
+   * @param cb Callback function to invoke.
+   */
+  void set_update_map_node_callback(std::function<void()> cb);
+
+  /**
    * @brief Set the callback invoked when the Clear Samples button is pressed.
    * Defaults to a no-op.
    * @param cb Callback function to invoke.
@@ -256,6 +263,8 @@ private:
     }};                                            ///< Solve (origin @keypoint) button callback.
   std::function<void()> on_save_{[] {
     }};                                            ///< Save button callback.
+  std::function<void()> on_update_map_node_{[] {
+    }};                                            ///< Update map node button callback.
   std::function<void()> on_clear_samples_{[] {
     }};                                            ///< Clear Samples callback.
   std::function<void()> on_set_keypoint_{[] {
@@ -286,6 +295,7 @@ private:
   ftxui::Component btn_solve_;          ///< Solve button component.
   ftxui::Component btn_solve_keypoint_;  ///< Solve (origin @keypoint) button component.
   ftxui::Component btn_save_;           ///< Save button component.
+  ftxui::Component btn_update_map_node_;  ///< Update map node button component.
   ftxui::Component btn_clear_samples_;  ///< Clear Samples button component.
   ftxui::Component btn_set_keypoint_;   ///< Set keypoint button component.
   ftxui::Component btn_clear_origin_keypoints_;  ///< Clear origin keypoints button component.
