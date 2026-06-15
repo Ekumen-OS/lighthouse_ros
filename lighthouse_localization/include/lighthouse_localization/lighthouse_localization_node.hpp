@@ -15,6 +15,7 @@
 #ifndef LIGHTHOUSE_LOCALIZATION__LIGHTHOUSE_LOCALIZATION_NODE_HPP_
 #define LIGHTHOUSE_LOCALIZATION__LIGHTHOUSE_LOCALIZATION_NODE_HPP_
 
+#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
@@ -66,6 +67,13 @@ private:
     const std::shared_ptr<lighthouse_station_mapper_msgs::srv::SetStationPoses::Request> request,
     std::shared_ptr<lighthouse_station_mapper_msgs::srv::SetStationPoses::Response> response);
 
+  /// Structure to store timestamped samples
+  struct TimestampedSample
+  {
+    rclcpp::Time timestamp;
+    lighthouse_geometry_utils::DeckPoseOptimization::Sample sample;
+  };
+
   /// Subscription to raw lighthouse deck measurements.
   rclcpp::Subscription<lighthouse_deck_msgs::msg::LighthouseDeckMeasurement>::SharedPtr
     subscription_;
@@ -88,6 +96,12 @@ private:
 
   /// Map frame name for published poses.
   std::string map_frame_;
+
+  /// Time tolerance for message synchronization (seconds).
+  double time_tolerance_;
+
+  /// Buffer of timestamped samples within the time tolerance window.
+  std::deque<TimestampedSample> sample_buffer_;
 };
 
 }  // namespace lighthouse_localization

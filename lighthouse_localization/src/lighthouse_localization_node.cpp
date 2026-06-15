@@ -28,6 +28,10 @@ LighthouseLocalizationNode::LighthouseLocalizationNode(const rclcpp::NodeOptions
   declare_parameter("map_frame", "lighthouse");
   map_frame_ = get_parameter("map_frame").as_string();
 
+  // Declare and get parameter for time tolerance
+  declare_parameter("time_tolerance", 0.1);
+  time_tolerance_ = get_parameter("time_tolerance").as_double();
+
   // Create subscription to lighthouse measurements
   subscription_ = create_subscription<lighthouse_deck_msgs::msg::LighthouseDeckMeasurement>(
     "lighthouse", rclcpp::QoS(10).best_effort(),
@@ -71,15 +75,11 @@ void LighthouseLocalizationNode::lighthouse_callback(
     return;
   }
 
-  // Create optimizer with known station poses
-  lighthouse_geometry_utils::DeckPoseOptimization optimizer(station_poses_, station_ids_);
-
-  // Convert measurements to optimizer samples
-  std::vector<lighthouse_geometry_utils::DeckPoseOptimization::Sample> deck_samples;
-
   constexpr double kDegToRad = M_PI / 180.0;
   const std::size_t n = msg->station_id.size();
+  const rclcpp::Time current_time(msg->header.stamp);
 
+  // Add new samples to the buffer
   for (std::size_t i = 0; i < n; ++i) {
     lighthouse_geometry_utils::DeckPoseOptimization::Sample sample;
     sample.station_id = static_cast<lighthouse_geometry_utils::StationId>(msg->station_id[i]);
@@ -98,11 +98,29 @@ void LighthouseLocalizationNode::lighthouse_callback(
       msg->elevation_3[i] * kDegToRad
     };
 
-    deck_samples.push_back(sample);
+    sample_buffer_.push_back({current_time, sample});
   }
 
-  if (deck_samples.empty()) {
+  // Remove samples older than time_tolerance_ from the front of the buffer
+  const rclcpp::Duration tolerance{std::chrono::duration<double>(time_tolerance_)};
+  while (!sample_buffer_.empty() &&
+    (current_time - sample_buffer_.front().timestamp) > tolerance)
+  {
+    sample_buffer_.pop_front();
+  }
+
+  if (sample_buffer_.empty()) {
     return;
+  }
+
+  // Create optimizer with known station poses
+  lighthouse_geometry_utils::DeckPoseOptimization optimizer(station_poses_, station_ids_);
+
+  // Collect all samples from the buffer for optimization
+  std::vector<lighthouse_geometry_utils::DeckPoseOptimization::Sample> deck_samples;
+  deck_samples.reserve(sample_buffer_.size());
+  for (const auto & timestamped_sample : sample_buffer_) {
+    deck_samples.push_back(timestamped_sample.sample);
   }
 
   try {
