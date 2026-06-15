@@ -1,0 +1,13 @@
+# Request: Array of station poses to set/save
+
+# Array of station poses with their IDs
+StationPose[] station_poses
+
+---
+# Response: Result of the set operation
+
+# True if station poses were successfully set/saved
+bool success
+
+# Optional status message (e.g., error description if success=false)
+string message
