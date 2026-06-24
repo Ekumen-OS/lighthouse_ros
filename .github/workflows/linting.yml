@@ -22,7 +22,7 @@ jobs:
       options: --user 1000:1000  # matches self-hosted runner UID/GID.
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
