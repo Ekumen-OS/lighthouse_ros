@@ -29,8 +29,12 @@ LighthouseLocalizationNode::LighthouseLocalizationNode(const rclcpp::NodeOptions
   map_frame_ = get_parameter("map_frame").as_string();
 
   // Declare and get parameter for time tolerance
-  declare_parameter("time_tolerance", 0.1);
+  declare_parameter("time_tolerance", 2.0 / 50.0);  // two cycles at 50Hz
   time_tolerance_ = get_parameter("time_tolerance").as_double();
+
+  // Declare and get parameter for maximum solver rate
+  declare_parameter("max_solver_rate", 20.0);
+  max_solver_rate_ = get_parameter("max_solver_rate").as_double();
 
   // Create subscription to lighthouse measurements
   subscription_ = create_subscription<lighthouse_deck_msgs::msg::LighthouseDeckMeasurement>(
@@ -113,6 +117,13 @@ void LighthouseLocalizationNode::lighthouse_callback(
     return;
   }
 
+  // Check if enough time has passed since last solver execution
+  const double min_solve_interval = 1.0 / max_solver_rate_;
+  const rclcpp::Duration time_since_last_solve = current_time - latest_solver_execution_;
+  if (time_since_last_solve.seconds() < min_solve_interval) {
+    return;  // Rate limit: skip solver execution
+  }
+
   // Create optimizer with known station poses
   lighthouse_geometry_utils::DeckPoseOptimization optimizer(station_poses_, station_ids_);
 
@@ -144,6 +155,9 @@ void LighthouseLocalizationNode::lighthouse_callback(
     pose_msg.pose.orientation.w = q.w();
 
     deck_pose_pub_->publish(pose_msg);
+
+    // Update last solve time after successful execution
+    latest_solver_execution_ = current_time;
   } catch (const std::exception & e) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 1000,

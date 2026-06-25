@@ -68,6 +68,7 @@ void MeasurementProcessor::processBlock(
   per_channel_buffer_[base_station_id].clear();
 
   if (!bearingsAreValid(sensor_bearings)) {
+    logger_->warning("Invalid sensor bearings, discarding sweep pair");
     return;
   }
 
@@ -82,10 +83,12 @@ bool MeasurementProcessor::blocksAreMatchedPair(
   const SweepBlockRawData & current, const SweepBlockRawData & previous) const
 {
   // Check if they're from the same rotation using timestamp0 (rotor zero crossing time)
-  // This matches the Crazyflie firmware approach with a tight tolerance of 100 ticks (~4.2 μs)
-  const auto timestamp0_diff = timestampDiff(current.timestamp0, previous.timestamp0);
+  if (timestampAbsDiffLargerThan(current.timestamp0, previous.timestamp0, 100)) {
+    const auto timestamp0_diff =
+      std::min(
+      timestampDiff(current.timestamp0, previous.timestamp0),
+      timestampDiff(previous.timestamp0, current.timestamp0));
 
-  if (timestamp0_diff > 100) {
     logger_->debug(
       "Sweep pair rejected: timestamp0 mismatch (" +
       std::to_string(timestamp0_diff) +

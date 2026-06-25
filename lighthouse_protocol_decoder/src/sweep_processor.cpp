@@ -46,6 +46,11 @@ void SweepProcessor::processFrame(const DataFrameContents & frame)
     }
   }
 
+  if (!sensors_to_remove.empty()) {
+    logger_->debug(
+      "Removing " + std::to_string(sensors_to_remove.size()) +
+      " frames from sweep buffer due to timestamp difference");
+  }
   for (const auto sensor : sensors_to_remove) {
     block_frames_.erase(sensor);
   }
@@ -57,6 +62,7 @@ void SweepProcessor::processFrame(const DataFrameContents & frame)
 
   // Invoke callback with complete sweep data
   if (callback_) {
+    logger_->debug("Sweep complete, invoking callback with sweep data");
     callback_(completeBlockInformation());
   }
 
@@ -92,9 +98,9 @@ bool SweepProcessor::validateSweep() const
     }
   }
 
-  if (valid_npolys < 3) {
+  if (valid_npolys < 1) {
     logger_->debug(
-      "Sweep discarded: need at least 3 sensor with valid polynomial, got " +
+      "Sweep discarded: need at least 1 sensor with valid polynomial, got " +
       std::to_string(valid_npolys));
     return false;
   }

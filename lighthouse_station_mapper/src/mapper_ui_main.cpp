@@ -28,7 +28,7 @@ int main(int argc, char ** argv)
   executor.add_node(node);
   while (rclcpp::ok() && !node->is_quit_requested()) {
     executor.spin_some();
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
   node->stop_renderer();
   rclcpp::shutdown();
