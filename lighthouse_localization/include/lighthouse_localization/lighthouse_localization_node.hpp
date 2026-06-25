@@ -100,6 +100,12 @@ private:
   /// Time tolerance for message synchronization (seconds).
   double time_tolerance_;
 
+  /// Maximum solver rate in Hz.
+  double max_solver_rate_;
+
+  /// Timestamp of the last solver execution.
+  rclcpp::Time latest_solver_execution_{0, 0, RCL_ROS_TIME};
+
   /// Buffer of timestamped samples within the time tolerance window.
   std::deque<TimestampedSample> sample_buffer_;
 };

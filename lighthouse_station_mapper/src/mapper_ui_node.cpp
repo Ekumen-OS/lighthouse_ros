@@ -66,7 +66,7 @@ MapperUiNode::MapperUiNode(const rclcpp::NodeOptions & options)
   declare_parameter("max_angular_spread", 5e-3);
   max_angular_spread_ = get_parameter("max_angular_spread").as_double();
 
-  declare_parameter("buffer_duration", 2.5);
+  declare_parameter("buffer_duration", 1.0);
   buffer_duration_ = get_parameter("buffer_duration").as_double();
 
   declare_parameter("min_samples_per_station", 3);
