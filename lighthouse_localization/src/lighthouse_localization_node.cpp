@@ -29,11 +29,11 @@ LighthouseLocalizationNode::LighthouseLocalizationNode(const rclcpp::NodeOptions
   map_frame_ = get_parameter("map_frame").as_string();
 
   // Declare and get parameter for time tolerance
-  declare_parameter("time_tolerance", 2.0 / 50.0);  // two cycles at 50Hz
+  declare_parameter("time_tolerance", 5.0 / 50.0);  // two cycles at 50Hz
   time_tolerance_ = get_parameter("time_tolerance").as_double();
 
   // Declare and get parameter for maximum solver rate
-  declare_parameter("max_solver_rate", 20.0);
+  declare_parameter("max_solver_rate", 30.0);
   max_solver_rate_ = get_parameter("max_solver_rate").as_double();
 
   // Create subscription to lighthouse measurements

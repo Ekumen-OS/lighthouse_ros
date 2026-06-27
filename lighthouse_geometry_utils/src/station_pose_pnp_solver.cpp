@@ -111,110 +111,22 @@ StationPosePnPSolver::solve(
     candidates.push_back(build_station_in_deck(rvecs[i], tvecs[i]));
   }
 
-  // Evaluate bearing residuals for each IPPE solution
-  auto compute_bearing_cost = [&](const Sophus::SE3d & station_in_deck) -> double {
-      double total_cost = 0.0;
-      for (size_t i = 0; i < 4; ++i) {
-        // Sensor position in deck frame (z=0)
-        Eigen::Vector3d sensor_in_deck(
-          kLighthouseDeckSensorPoses[i].x(),
-          kLighthouseDeckSensorPoses[i].y(),
-          0.0);
-
-        // Transform to station frame
-        const Eigen::Vector3d sensor_in_station =
-          station_in_deck.inverse() * sensor_in_deck;
-
-        // Estimated bearing vector
-        const Eigen::Vector3d estimated_bearing = sensor_in_station.normalized();
-
-        // Convert observed angles to bearing vector
-        const double el = elevations[i];
-        const double az = azimuths[i];
-        const double cos_el = std::cos(el);
-        Eigen::Vector3d observed_bearing(
-          cos_el * std::cos(az),
-          cos_el * std::sin(az),
-          std::sin(el));
-        observed_bearing.normalize();
-
-        // Chordal distance residual
-        const Eigen::Vector3d residual = estimated_bearing - observed_bearing;
-        total_cost += residual.squaredNorm();
-      }
-      return total_cost;
-    };
-
-  // Select solution with lower bearing residual
-  size_t best_idx = 0;
-  double best_cost = compute_bearing_cost(candidates[0]);
-  for (size_t i = 1; i < candidates.size(); ++i) {
-    const double cost = compute_bearing_cost(candidates[i]);
-    if (cost < best_cost) {
-      best_cost = cost;
-      best_idx = i;
-    }
-  }
-
-  // If IPPE gives poor solutions (cost > 1e-6), fall back to plain ITERATIVE
-  // This can happen for edge cases like perfectly overhead stations
-  if (best_cost > 1e-6) {
-    cv::Mat fallback_rvec, fallback_tvec;
-    bool fallback_success = cv::solvePnP(
-      sensor_poses_3d, image_points_vec, camera_matrix_,
-      distortion_coefficients_, fallback_rvec, fallback_tvec,
-      false,  // no initial guess
-      cv::SOLVEPNP_ITERATIVE);
-
-    if (fallback_success) {
-      Sophus::SE3d fallback_candidate = build_station_in_deck(fallback_rvec, fallback_tvec);
-      double fallback_cost = compute_bearing_cost(fallback_candidate);
-      if (fallback_cost < best_cost) {
-        return fallback_candidate;
-      }
-    }
-  }
-
   // If costs are similar (within 10x), use physical heuristic to disambiguate
   // Step 2b: Disambiguate using physical heuristics if we have 2 solutions
-  size_t chosen_idx = best_idx;
+  size_t chosen_idx = 0;
   if (candidates.size() > 1) {
-    const double cost_ratio = std::max(best_cost, compute_bearing_cost(candidates[1])) /
-      std::min(best_cost, compute_bearing_cost(candidates[1]));
+    // Costs are similar - use physical heuristics to disambiguate
+    const Eigen::Vector3d deck_z(0.0, 0.0, 1.0);
+    const Eigen::Vector3d station_z0 = candidates[0].rotationMatrix().col(2);
+    const Eigen::Vector3d station_z1 = candidates[1].rotationMatrix().col(2);
 
-    if (cost_ratio < 10.0) {
-      // Costs are similar - use physical heuristics to disambiguate
-      const Eigen::Vector3d deck_z(0.0, 0.0, 1.0);
-      const Eigen::Vector3d station_z0 = candidates[0].rotationMatrix().col(2);
-      const Eigen::Vector3d station_z1 = candidates[1].rotationMatrix().col(2);
+    const double dot0 = station_z0.dot(deck_z);
+    const double dot1 = station_z1.dot(deck_z);
 
-      const double dot0 = station_z0.dot(deck_z);
-      const double dot1 = station_z1.dot(deck_z);
-
-      // Heuristic 1: Prefer solution where Z-axes are aligned (not opposed)
-      // This works when station and deck are both roughly upright
-      if (dot1 > 0.0 && dot0 <= 0.0) {
-        chosen_idx = 1;
-      } else if (dot0 > 0.0 && dot1 <= 0.0) {
-        chosen_idx = 0;
-      } else if (std::abs(dot0) < 0.3 && std::abs(dot1) < 0.3) {
-        // Heuristic 2: For ceiling-mounted stations (Z-axes perpendicular),
-        // prefer solution where station is "above" the deck
-        // Station X-axis points toward target, so it should point down (negative Z)
-        // Z-axes are nearly perpendicular - likely ceiling mount
-        const Eigen::Vector3d station_x0 = candidates[0].rotationMatrix().col(0);
-        const Eigen::Vector3d station_x1 = candidates[1].rotationMatrix().col(0);
-        const double x_z0 = station_x0.dot(deck_z);
-        const double x_z1 = station_x1.dot(deck_z);
-
-        // Prefer solution where station X-axis points significantly downward
-        // This indicates the station is above the deck looking down
-        if (x_z1 < x_z0 - 0.1) {
-          chosen_idx = 1;
-        } else if (x_z0 < x_z1 - 0.1) {
-          chosen_idx = 0;
-        }
-      }
+    if (dot0 > dot1) {
+      chosen_idx = 0;
+    } else {
+      chosen_idx = 1;
     }
   }
 
@@ -231,15 +143,8 @@ StationPosePnPSolver::solve(
   if (refine_success) {
     // Validate that refinement actually improved the solution
     Sophus::SE3d refined_candidate = build_station_in_deck(refined_rvec, refined_tvec);
-    double refined_cost = compute_bearing_cost(refined_candidate);
-    double ippe_cost = compute_bearing_cost(candidates[chosen_idx]);
-
-    // Only use refined solution if it's better or very close
-    // Allow refinement to be up to 10% worse to account for numerical differences
-    if (refined_cost <= ippe_cost * 1.1) {
-      return refined_candidate;
-    }
-  }
+    return refined_candidate;
+}
 
   // Refinement failed or made things worse - return the IPPE solution as-is
   return candidates[chosen_idx];
