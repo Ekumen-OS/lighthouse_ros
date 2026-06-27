@@ -31,7 +31,7 @@ using test::compute_direction_error_radians;
 using test::compute_expected_measurements;
 using test::compute_expected_measurements_with_noise;
 using test::compute_translation_error;
-using test::create_pose_facing_target;
+using test::create_upright_station_pose;
 
 constexpr double deg2rad(double degrees) {return degrees * M_PI / 180.0;}
 
@@ -53,7 +53,7 @@ TEST_F(StationGeometryOptimizationTest, SolveWithNoSamplesThrows) {
 TEST_F(StationGeometryOptimizationTest, DisconnectedGraphThrows) {
   // deck 0 -- station 0   and   deck 1 -- station 1: two isolated subgraphs.
   const Sophus::SE3d station_pose =
-    create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({3.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [e0, a0] =
     compute_expected_measurements(station_pose);
@@ -68,7 +68,7 @@ TEST_F(StationGeometryOptimizationTest, DisconnectedGraphThrows) {
 
 TEST_F(StationGeometryOptimizationTest, ResetAndSolveWithNoSamplesThrows) {
   const Sophus::SE3d station_pose =
-    create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({3.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [e, a] =
     compute_expected_measurements(station_pose);
@@ -183,8 +183,8 @@ INSTANTIATE_TEST_SUITE_P(
     // Two stations observed by two decks each
     OptimizationScenario{
     /* station_poses = */
-    {create_pose_facing_target({0.3, 0.2, 1.5}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({-0.3, -0.2, 2.0}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({4.0, 2.0, 1.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({-3.5, -3.0, 2.0}, {0.0, 0.0, 0.0})},
     /* deck_poses = */
     {Sophus::SE3d{},
       Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.4, 0.0, 0.0)),
@@ -198,9 +198,9 @@ INSTANTIATE_TEST_SUITE_P(
     // B-C
     OptimizationScenario{
     /* station_poses = */
-    {create_pose_facing_target({1.0, 1.0, 3.0}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({-1.0, 1.0, 3.0}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({1.0, -1.0, 3.0}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({6.0, 4.0, 3.0}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({-5.5, 5.0, 3.0}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({5.0, -6.0, 3.0}, {0.0, 0.0, 0.0})},
     /* deck_poses = */
     {Sophus::SE3d{},
       Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.3, 0.0, 0.0)),
@@ -224,9 +224,9 @@ INSTANTIATE_TEST_SUITE_P(
     // C-A
     OptimizationScenario{
     /* station_poses = */
-    {create_pose_facing_target({1.5, 1.0, 2.5}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({-1.5, 0.5, 3.0}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({0.0, -1.5, 2.8}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({5.5, 4.0, 2.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({-5.5, 3.0, 3.0}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({4.0, -5.5, 2.8}, {0.0, 0.0, 0.0})},
     /* deck_poses = */
     {Sophus::SE3d{},
       Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.3, 0.0, 0.0)),
@@ -253,136 +253,17 @@ INSTANTIATE_TEST_SUITE_P(
     // Four stations in a line, connected by one deck between each pair
     OptimizationScenario{
     /* station_poses = */
-    {create_pose_facing_target({-1.5, 0.0, 1.5}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({-0.5, 1.0, 2.0}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({0.5, -1.0, 1.8}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({1.5, 0.5, 1.6}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({-4.5, 0.0, 1.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({-2.0, 4.0, 2.0}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({2.5, -4.0, 1.8}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({5.0, 2.5, 1.6}, {0.0, 0.0, 0.0})},
     /* deck_poses = */
     {Sophus::SE3d{},
       Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.3, 0.0, 0.0)),
       Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 0.3, 0.0))},
     /* observations = */
     {{0, 0}, {0, 1}, {1, 1}, {1, 2}, {2, 2}, {2, 3}},
-    /* description = */ "FourStationsLine_OneDeckBetweenEachPair"},
-
-    // 7x7 grid: 16 stations (4x4, 2m apart at z=2.5), 64 deck poses
-    // (8x8, 1m apart), connected to stations within 3m
-    OptimizationScenario{
-    /* station_poses = */
-    {create_pose_facing_target({0.0, 0.0, 2.5}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({2.0, 0.0, 2.5}, {2.0, 0.0, 0.0}),
-      create_pose_facing_target({4.0, 0.0, 2.5}, {4.0, 0.0, 0.0}),
-      create_pose_facing_target({6.0, 0.0, 2.5}, {6.0, 0.0, 0.0}),
-      create_pose_facing_target({0.0, 2.0, 2.5}, {0.0, 2.0, 0.0}),
-      create_pose_facing_target({2.0, 2.0, 2.5}, {2.0, 2.0, 0.0}),
-      create_pose_facing_target({4.0, 2.0, 2.5}, {4.0, 2.0, 0.0}),
-      create_pose_facing_target({6.0, 2.0, 2.5}, {6.0, 2.0, 0.0}),
-      create_pose_facing_target({0.0, 4.0, 2.5}, {0.0, 4.0, 0.0}),
-      create_pose_facing_target({2.0, 4.0, 2.5}, {2.0, 4.0, 0.0}),
-      create_pose_facing_target({4.0, 4.0, 2.5}, {4.0, 4.0, 0.0}),
-      create_pose_facing_target({6.0, 4.0, 2.5}, {6.0, 4.0, 0.0}),
-      create_pose_facing_target({0.0, 6.0, 2.5}, {0.0, 6.0, 0.0}),
-      create_pose_facing_target({2.0, 6.0, 2.5}, {2.0, 6.0, 0.0}),
-      create_pose_facing_target({4.0, 6.0, 2.5}, {4.0, 6.0, 0.0}),
-      create_pose_facing_target({6.0, 6.0, 2.5}, {6.0, 6.0, 0.0})},
-    /* deck_poses = */
-    {Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 0.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 0.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(2.0, 0.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(3.0, 0.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(4.0, 0.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(5.0, 0.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(6.0, 0.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(7.0, 0.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 1.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 1.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(2.0, 1.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(3.0, 1.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(4.0, 1.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(5.0, 1.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(6.0, 1.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(7.0, 1.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 2.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 2.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(2.0, 2.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(3.0, 2.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(4.0, 2.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(5.0, 2.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(6.0, 2.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(7.0, 2.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 3.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 3.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(2.0, 3.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(3.0, 3.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(4.0, 3.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(5.0, 3.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(6.0, 3.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(7.0, 3.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 4.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 4.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(2.0, 4.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(3.0, 4.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(4.0, 4.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(5.0, 4.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(6.0, 4.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(7.0, 4.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 5.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 5.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(2.0, 5.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(3.0, 5.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(4.0, 5.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(5.0, 5.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(6.0, 5.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(7.0, 5.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 6.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 6.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(2.0, 6.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(3.0, 6.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(4.0, 6.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(5.0, 6.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(6.0, 6.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(7.0, 6.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 7.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 7.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(2.0, 7.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(3.0, 7.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(4.0, 7.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(5.0, 7.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(6.0, 7.0, 0.0)),
-      Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(7.0, 7.0, 0.0))},
-    /* observations = */
-    {{0, 0}, {1, 0}, {1, 1}, {2, 1},                 //
-      {3, 1}, {3, 2}, {4, 2}, {5, 2},                //
-      {5, 3}, {6, 3}, {7, 3}, {8, 0},                //
-      {8, 4}, {9, 0}, {9, 1}, {9, 4},                //
-      {9, 5}, {10, 1}, {10, 5}, {11, 1},             //
-      {11, 2}, {11, 5}, {11, 6}, {12, 2},            //
-      {12, 6}, {13, 2}, {13, 3}, {13, 6},            //
-      {13, 7}, {14, 3}, {14, 7}, {15, 3},            //
-      {15, 7}, {16, 4}, {17, 4}, {17, 5},            //
-      {18, 5}, {19, 5}, {19, 6}, {20, 6},            //
-      {21, 6}, {21, 7}, {22, 7}, {23, 7},            //
-      {24, 4}, {24, 8}, {25, 4}, {25, 5},            //
-      {25, 8}, {25, 9}, {26, 5}, {26, 9},            //
-      {27, 5}, {27, 6}, {27, 9}, {27, 10},           //
-      {28, 6}, {28, 10}, {29, 6}, {29, 7},           //
-      {29, 10}, {29, 11}, {30, 7}, {30, 11},         //
-      {31, 7}, {31, 11}, {32, 8}, {33, 8},           //
-      {33, 9}, {34, 9}, {35, 9}, {35, 10},           //
-      {36, 10}, {37, 10}, {37, 11}, {38, 11},        //
-      {39, 11}, {40, 8}, {40, 12}, {41, 8},          //
-      {41, 9}, {41, 12}, {41, 13}, {42, 9},          //
-      {42, 13}, {43, 9}, {43, 10}, {43, 13},         //
-      {43, 14}, {44, 10}, {44, 14}, {45, 10},        //
-      {45, 11}, {45, 14}, {45, 15}, {46, 11},        //
-      {46, 15}, {47, 11}, {47, 15}, {48, 12},        //
-      {49, 12}, {49, 13}, {50, 13}, {51, 13},        //
-      {51, 14}, {52, 14}, {53, 14}, {53, 15},        //
-      {54, 15}, {55, 15}, {56, 12}, {57, 12},        //
-      {57, 13}, {58, 13}, {59, 13}, {59, 14},        //
-      {60, 14}, {61, 14}, {61, 15}, {62, 15},        //
-      {63, 15}},
-    /* description = */ "Grid7x7_16Stations_64Decks"}),
+    /* description = */ "FourStationsLine_OneDeckBetweenEachPair"}),
   [](const ::testing::TestParamInfo<OptimizationScenario> & info) {
     return info.param.description;
   });

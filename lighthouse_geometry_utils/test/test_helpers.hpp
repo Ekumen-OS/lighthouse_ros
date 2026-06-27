@@ -73,11 +73,14 @@ double compute_direction_error_radians(
   const Sophus::SE3d & observed_pose,
   const Sophus::SE3d & expected_pose);
 
-/// @brief Create a pose at the given position oriented to face a target point
-/// @param position The position of the pose
-/// @param target The point to look at (X-axis will point toward this)
-/// @return SE3 pose with X-axis pointing from position to target
-Sophus::SE3d create_pose_facing_target(
+/// @brief Create an upright lighthouse station pose
+/// @param position The position of the station
+/// @param target A point in the deck area to orient toward
+/// @return SE3 pose with Z-axis pointing up and X-axis pointing toward target
+/// @details Creates a realistic lighthouse station mounting where Z-axis is
+///          vertical (upright) and X-axis points horizontally toward the target.
+///          This represents typical ceiling or wall-mounted configurations.
+Sophus::SE3d create_upright_station_pose(
   const Eigen::Vector3d & position,
   const Eigen::Vector3d & target);
 

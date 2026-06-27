@@ -30,7 +30,7 @@ using test::add_noise_to_pose;
 using test::compute_direction_error_radians;
 using test::compute_expected_measurements_with_noise;
 using test::compute_translation_error;
-using test::create_pose_facing_target;
+using test::create_upright_station_pose;
 
 constexpr double deg2rad(double degrees) {return degrees * M_PI / 180.0;}
 
@@ -109,50 +109,51 @@ TEST_P(DeckPoseOptimizationPoseTest, RecoveredDeckPoseMatchesGroundTruth) {
 INSTANTIATE_TEST_SUITE_P(
   Scenarios, DeckPoseOptimizationPoseTest,
   ::testing::Values(
-    // Single station above deck
+    // Single upright station
+    // Station 3.5m away horizontally, 2m up -> ~30° tilt
     DeckPoseScenario{
     /* deck_pose = */
     Sophus::SE3d{},
     /* station_poses = */
-    {create_pose_facing_target({0.0, 0.0, 2.0}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({3.5, 0.0, 2.0}, {0.0, 0.0, 0.0})},
     /* description = */ "SingleStation"},
 
-    // Two stations
+    // Two upright stations at different positions
     DeckPoseScenario{
     /* deck_pose = */
     Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.5, 0.3, 0.0)),
     /* station_poses = */
-    {create_pose_facing_target({0.3, 0.2, 1.5}, {0.5, 0.3, 0.0}),
-      create_pose_facing_target({-0.3, -0.2, 2.0}, {0.5, 0.3, 0.0})},
+    {create_upright_station_pose({3.0, 2.0, 2.0}, {0.5, 0.3, 0.0}),
+      create_upright_station_pose({-2.5, -1.5, 2.5}, {0.5, 0.3, 0.0})},
     /* description = */ "TwoStations"},
 
-    // Three stations in a triangle
+    // Three upright stations in a triangle
     DeckPoseScenario{
     /* deck_pose = */
     Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(1.0, 1.0, 0.0)),
     /* station_poses = */
-    {create_pose_facing_target({1.0, 1.0, 3.0}, {1.0, 1.0, 0.0}),
-      create_pose_facing_target({-1.0, 1.0, 3.0}, {1.0, 1.0, 0.0}),
-      create_pose_facing_target({1.0, -1.0, 3.0}, {1.0, 1.0, 0.0})},
+    {create_upright_station_pose({4.0, 1.0, 3.0}, {1.0, 1.0, 0.0}),
+      create_upright_station_pose({-2.0, 4.0, 3.0}, {1.0, 1.0, 0.0}),
+      create_upright_station_pose({1.0, -3.0, 3.0}, {1.0, 1.0, 0.0})},
     /* description = */ "ThreeStationsTriangle"},
 
-    // Four stations surrounding the deck
+    // Four upright stations surrounding the deck
     DeckPoseScenario{
     /* deck_pose = */
     Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.0, 0.0, 0.0)),
     /* station_poses = */
-    {create_pose_facing_target({-1.5, 0.0, 1.5}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({-0.5, 1.0, 2.0}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({0.5, -1.0, 1.8}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({1.5, 0.5, 1.6}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({-3.0, 0.0, 2.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({-2.0, 3.5, 2.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({2.0, -3.5, 2.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({3.5, 2.0, 2.5}, {0.0, 0.0, 0.0})},
     /* description = */ "FourStationsSurrounding"},
 
-    // Single station with deck 2.5m in front
+    // Single upright station farther away
     DeckPoseScenario{
     /* deck_pose = */
     Sophus::SE3d{},
     /* station_poses = */
-    {create_pose_facing_target({0.0, 0.0, 2.5}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({4.0, 0.0, 2.5}, {0.0, 0.0, 0.0})},
     /* description = */ "SingleStationDeck25mInFront"}),
   [](const ::testing::TestParamInfo<DeckPoseScenario> & info) {
     return info.param.description;
@@ -188,7 +189,7 @@ TEST(DeckPoseOptimizationErrorTest, ThrowsOnEmptyStationPoses) {
 
 TEST(DeckPoseOptimizationErrorTest, ThrowsOnEmptySamples) {
   // Create a valid station pose
-  Sophus::SE3d station_pose = create_pose_facing_target({0.0, 0.0, 2.0}, {0.0, 0.0, 0.0});
+  Sophus::SE3d station_pose = create_upright_station_pose({0.0, 0.0, 2.0}, {0.0, 0.0, 0.0});
   std::vector<Sophus::SE3d> station_poses = {station_pose};
   std::vector<StationId> station_ids = {0};
 
@@ -211,7 +212,7 @@ TEST(DeckPoseOptimizationErrorTest, ThrowsOnEmptySamples) {
 
 TEST(DeckPoseOptimizationErrorTest, ThrowsOnAllUnknownStationIds) {
   // Create a valid station pose with ID 0
-  Sophus::SE3d station_pose = create_pose_facing_target({0.0, 0.0, 2.0}, {0.0, 0.0, 0.0});
+  Sophus::SE3d station_pose = create_upright_station_pose({0.0, 0.0, 2.0}, {0.0, 0.0, 0.0});
   std::vector<Sophus::SE3d> station_poses = {station_pose};
   std::vector<StationId> station_ids = {0};
 
@@ -246,7 +247,7 @@ TEST(DeckPoseOptimizationErrorTest, ThrowsOnAllUnknownStationIds) {
 
 TEST(DeckPoseOptimizationErrorTest, HandlesPartiallyUnknownStationIds) {
   // Create a valid station pose with ID 0
-  Sophus::SE3d station_pose = create_pose_facing_target({0.0, 0.0, 2.0}, {0.0, 0.0, 0.0});
+  Sophus::SE3d station_pose = create_upright_station_pose({3.5, 0.0, 2.0}, {0.0, 0.0, 0.0});
   std::vector<Sophus::SE3d> station_poses = {station_pose};
   std::vector<StationId> station_ids = {0};
 

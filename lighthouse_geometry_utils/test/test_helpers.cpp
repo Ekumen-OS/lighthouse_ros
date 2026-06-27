@@ -99,26 +99,45 @@ double compute_direction_error_radians(
   return std::max(error_x, error_z);
 }
 
-Sophus::SE3d create_pose_facing_target(
+Sophus::SE3d create_upright_station_pose(
   const Eigen::Vector3d & position,
   const Eigen::Vector3d & target)
 {
-  // Direction from position to target (this will be the X-axis)
-  Eigen::Vector3d x_axis = (target - position).normalized();
+  // Direction to target in 3D
+  Eigen::Vector3d to_target = target - position;
 
-  // Choose an arbitrary up vector (Z-up convention)
-  Eigen::Vector3d up(0, 0, 1);
+  // Project onto XY plane to get horizontal direction
+  Eigen::Vector3d horizontal_dir(to_target.x(), to_target.y(), 0);
+  double horizontal_distance = horizontal_dir.norm();
 
-  // Handle the case where x_axis is parallel to up
-  if (std::abs(x_axis.dot(up)) > 0.99) {
-    up = Eigen::Vector3d(0, 1, 0);
+  // Handle case where target is directly above/below station
+  if (horizontal_distance < 1e-6) {
+    horizontal_dir = Eigen::Vector3d(1, 0, 0);  // Default to +X direction
+    horizontal_distance = 1.0;
+  } else {
+    horizontal_dir.normalize();
   }
 
-  // Y-axis perpendicular to both X and up
-  Eigen::Vector3d y_axis = up.cross(x_axis).normalized();
+  // Initial upright frame: X horizontal toward target, Z up, Y perpendicular
+  Eigen::Vector3d x_init = horizontal_dir;
+  Eigen::Vector3d z_init(0, 0, 1);
+  Eigen::Vector3d y_init = z_init.cross(x_init).normalized();
 
-  // Z-axis perpendicular to both X and Y
-  Eigen::Vector3d z_axis = x_axis.cross(y_axis).normalized();
+  // Calculate pitch angle to point X at the 3D target
+  // Positive pitch tilts X-axis upward (target above station)
+  // Negative pitch tilts X-axis downward (target below station)
+  double vertical_offset = to_target.z();
+  double pitch_angle = std::atan2(vertical_offset, horizontal_distance);
+
+  // Create rotation around Y axis by pitch angle
+  // This tilts X toward the target while keeping Y fixed
+  Eigen::AngleAxisd pitch_rotation(pitch_angle, y_init);
+
+  // Apply rotation to initial frame
+  Eigen::Vector3d x_axis = pitch_rotation * x_init;
+  Eigen::Vector3d z_axis = pitch_rotation * z_init;
+  // Y-axis remains the same (we rotated around it)
+  Eigen::Vector3d y_axis = y_init;
 
   // Build rotation matrix
   Eigen::Matrix3d rotation;

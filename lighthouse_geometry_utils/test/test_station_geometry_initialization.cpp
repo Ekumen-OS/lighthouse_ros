@@ -25,7 +25,7 @@ namespace lighthouse_geometry_utils
 using test::compute_direction_error_radians;
 using test::compute_expected_measurements;
 using test::compute_translation_error;
-using test::create_pose_facing_target;
+using test::create_upright_station_pose;
 
 class StationGeometryInitializationTest : public ::testing::Test
 {
@@ -56,7 +56,7 @@ TEST_F(StationGeometryInitializationTest, DisconnectedGraphThrows) {
   // deck 0 -- station 0
   // deck 1 -- station 1  (no edge connecting these two subgraphs)
   const Sophus::SE3d station_pose =
-    create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [elevations0, azimuths0] = make_measurement(station_pose);
   uut->addSample(elevations0, azimuths0, /*station_id=*/ 0, /*deck_pose_id=*/ 0);
@@ -71,7 +71,7 @@ TEST_F(StationGeometryInitializationTest, DisconnectedGraphThrows) {
 
 TEST_F(StationGeometryInitializationTest, SingleSampleReturnsResult) {
   const Sophus::SE3d station_pose =
-    create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [elevations, azimuths] = make_measurement(station_pose);
   uut->addSample(elevations, azimuths, /*station_id=*/ 0, /*deck_pose_id=*/ 0);
@@ -87,7 +87,7 @@ TEST_F(StationGeometryInitializationTest, SingleSampleReturnsResult) {
 
 TEST_F(StationGeometryInitializationTest, RootDeckHasIdentityPose) {
   const Sophus::SE3d station_pose =
-    create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [elevations, azimuths] = make_measurement(station_pose);
   uut->addSample(elevations, azimuths, /*station_id=*/ 0, /*deck_pose_id=*/ 0);
@@ -103,7 +103,7 @@ TEST_F(StationGeometryInitializationTest, RootDeckHasIdentityPose) {
 TEST_F(StationGeometryInitializationTest, TwoDecksOneStationConnected) {
   // Both decks observe the same station: deck0 -- station0 -- deck1
   const Sophus::SE3d station_pose =
-    create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [elevations0, azimuths0] = make_measurement(station_pose);
   uut->addSample(elevations0, azimuths0, /*station_id=*/ 0, /*deck_pose_id=*/ 0);
@@ -120,11 +120,11 @@ TEST_F(StationGeometryInitializationTest, TwoDecksOneStationConnected) {
 
 TEST_F(StationGeometryInitializationTest, AllKnownIdsAppearInResult) {
   const Sophus::SE3d station_pose =
-    create_pose_facing_target({0.3, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({0.3, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   // deck 0 sees station 0 and station 1; deck 1 sees station 1
   const Sophus::SE3d station_pose2 =
-    create_pose_facing_target({-0.3, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({-0.3, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   const auto [e0, a0] = make_measurement(station_pose);
   uut->addSample(e0, a0, /*station_id=*/ 0, /*deck_pose_id=*/ 0);
@@ -148,7 +148,7 @@ TEST_F(StationGeometryInitializationTest, AllKnownIdsAppearInResult) {
 
 TEST_F(StationGeometryInitializationTest, ResetClearsState) {
   const Sophus::SE3d station_pose =
-    create_pose_facing_target({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({0.0, 0.0, 1.5}, {0.0, 0.0, 0.0});
 
   // Add a sample and verify solve succeeds.
   const auto [elevations, azimuths] = make_measurement(station_pose);
@@ -162,9 +162,9 @@ TEST_F(StationGeometryInitializationTest, ResetClearsState) {
 
 TEST_F(StationGeometryInitializationTest, ResetAllowsReuse) {
   const Sophus::SE3d station_pose_a =
-    create_pose_facing_target({0.3, 0.2, 1.5}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({0.3, 0.2, 1.5}, {0.0, 0.0, 0.0});
   const Sophus::SE3d station_pose_b =
-    create_pose_facing_target({-0.2, 0.1, 2.0}, {0.0, 0.0, 0.0});
+    create_upright_station_pose({-0.2, 0.1, 2.0}, {0.0, 0.0, 0.0});
 
   // First run: one station.
   const auto [e0, a0] = make_measurement(station_pose_a);
@@ -282,7 +282,7 @@ INSTANTIATE_TEST_SUITE_P(
     // Single deck, single station
     InitializationScenario{
     /* station_poses = */
-    {create_pose_facing_target({0.3, 0.2, 1.5}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({2.5, 1.5, 1.5}, {0.0, 0.0, 0.0})},
     /* deck_poses = */ {Sophus::SE3d{}},
     /* observations = */ {{0, 0}},
     /* description = */ "OneDeckOneStation"},
@@ -290,7 +290,7 @@ INSTANTIATE_TEST_SUITE_P(
     // Two decks (one closer, one farther) sharing a single station
     InitializationScenario{
     /* station_poses = */
-    {create_pose_facing_target({0.0, 0.0, 2.0}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({4.0, 0.0, 2.0}, {0.0, 0.0, 0.0})},
     /* deck_poses = */
     {Sophus::SE3d{},
       Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.5, 0.0, 0.0))},
@@ -300,8 +300,8 @@ INSTANTIATE_TEST_SUITE_P(
     // One deck observing two stations at different positions
     InitializationScenario{
     /* station_poses = */
-    {create_pose_facing_target({0.3, 0.2, 1.5}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({-0.3, -0.2, 2.0}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({2.5, 1.5, 1.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({-2.0, -1.5, 2.0}, {0.0, 0.0, 0.0})},
     /* deck_poses = */ {Sophus::SE3d{}},
     /* observations = */ {{0, 0}, {0, 1}},
     /* description = */ "OneDeckTwoStations"},
@@ -310,9 +310,9 @@ INSTANTIATE_TEST_SUITE_P(
     // B-C
     InitializationScenario{
     /* station_poses = */
-    {create_pose_facing_target({0.3, 0.2, 1.5}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({-0.3, 0.1, 1.8}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({0.0, -0.3, 2.0}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({2.5, 1.5, 1.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({-2.0, 1.0, 1.8}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({1.5, -2.5, 2.0}, {0.0, 0.0, 0.0})},
     /* deck_poses = */
     {Sophus::SE3d{},
       Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.3, 0.0, 0.0)),
@@ -337,9 +337,9 @@ INSTANTIATE_TEST_SUITE_P(
     // B-C, three between C-A
     InitializationScenario{
     /* station_poses = */
-    {create_pose_facing_target({0.3, 0.2, 1.5}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({-0.3, 0.1, 1.8}, {0.0, 0.0, 0.0}),
-      create_pose_facing_target({0.0, -0.3, 2.0}, {0.0, 0.0, 0.0})},
+    {create_upright_station_pose({2.5, 1.5, 1.5}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({-2.0, 1.0, 1.8}, {0.0, 0.0, 0.0}),
+      create_upright_station_pose({1.5, -2.5, 2.0}, {0.0, 0.0, 0.0})},
     /* deck_poses = */
     {Sophus::SE3d{},
       Sophus::SE3d(Sophus::SO3d{}, Eigen::Vector3d(0.3, 0.0, 0.0)),

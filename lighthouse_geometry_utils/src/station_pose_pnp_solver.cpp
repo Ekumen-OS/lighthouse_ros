@@ -144,7 +144,7 @@ StationPosePnPSolver::solve(
     // Validate that refinement actually improved the solution
     Sophus::SE3d refined_candidate = build_station_in_deck(refined_rvec, refined_tvec);
     return refined_candidate;
-}
+  }
 
   // Refinement failed or made things worse - return the IPPE solution as-is
   return candidates[chosen_idx];
