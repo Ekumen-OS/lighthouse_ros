@@ -14,11 +14,9 @@ Launch the interactive mapper with a connected lighthouse deck:
 ros2 launch lighthouse_station_mapper interactive_mapping.launch.py device:=/dev/ttyACM0
 ```
 
-Optional arguments:
-- `baudrate:=230400` - Serial port baudrate (default: 230400)
-- `use_rviz:=true` - Launch RViz for visualization (default: false)
+See example in this video:
 
-The mapper UI will open in a separate xterm window.
+https://github.com/user-attachments/assets/1d2d9ecf-f871-4dcb-8961-9a4889b39a24
 
 ## Mapping Workflow
 
@@ -28,13 +26,14 @@ The mapper UI will open in a separate xterm window.
    - The first sample you take defines the origin of the coordinate system
 4. **Move the deck to a different position** (at least 10-20 cm away with some rotation)
 5. **Repeat steps 2-4** to collect samples from multiple deck positions (minimum 2, more is better)
-6. **Press 'Solve' (or 'v')** to compute station poses
+6. **Press 'Solve station poses' (or 'v')** to compute station poses
    - The coordinate system origin is placed at the first sample position
    - Results appear in the "Solution" table and are visualized in RViz (if enabled)
+7. **Press 'Update map node'** to send the computed station poses to the localization node
+   - This enables real-time pose tracking using the calibrated station geometry
 
 ### Other Controls
 
-- **Save map** (or 'w') - Write the current station geometry to a CSV file
-- **Update map node** (or 'u') - Send current station poses to the localization node
+- **Save map** - Write the current station geometry to a CSV file
 - **Clear samples** (or 'c') - Delete all samples and reset the solution
 - **Quit** (or 'q') - Exit the mapper

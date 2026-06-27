@@ -24,11 +24,11 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     use_rviz_arg, use_rviz_conf = (
         DeclareLaunchArgument(
-            "use_rviz",
-            default_value="false",
+            "rviz",
+            default_value="true",
             description="Whether to launch RViz2 for visualization",
         ),
-        LaunchConfiguration("use_rviz"),
+        LaunchConfiguration("rviz"),
     )
 
     rviz_config = PathJoinSubstitution(
