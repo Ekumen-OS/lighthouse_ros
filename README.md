@@ -1,8 +1,49 @@
 # Lighthouse ROS 2
 
-This repository contains a ROS 2 node that decodes the output serial stream from a `lighthouse deck` and publishes the azimuth and elevation angles data to ROS messages. This allows to interface ROS 2 systems with the LightHouse positioning system for the Crazyflie 2.1.
+Build your own low-cost motion capture system using ROS 2 and the Valve Lighthouse Positioning system.
 
-## TL;DR instructions for people already up to speed
+## Overview
+
+[Lighthouse](https://en.wikipedia.org/wiki/Lighthouse_(virtual_reality)) is a localization system developed by Valve for the [HTC Vive](https://en.wikipedia.org/wiki/HTC_Vive) VR system. It uses a combination of infrared-emitting base stations and sensors to track the position and orientation of objects in 3D space with excellent accuracy and low latency.
+
+The [Lighthouse Positioning Deck](https://www.bitcraze.io/products/lighthouse-positioning-deck/) is a small receiver board originally designed for the [Crazyflie](https://www.bitcraze.io/products/crazyflie-2-1-plus/) nano drone from Bitcraze. It contains an FPGA and four infrared sensors that can track the deck's position and orientation relative to one or more Lighthouse base stations.
+
+This repository provides ROS 2 packages that interface with the Lighthouse Positioning Deck through a simple USB-to-serial adapter, enabling you to build a low-cost motion capture system for robotics applications. The packages handle protocol decoding, station calibration, and real-time pose tracking.
+
+https://github.com/user-attachments/assets/1d2d9ecf-f871-4dcb-8961-9a4889b39a24
+
+## Hardware Requirements
+
+To build the adapter and use these packages, you will need the following hardware:
+
+1. **Lighthouse Base Stations**: Up to four V2 Lighthouse base stations are supported. Notice that V1 base stations are not supported at this time.
+
+2. **Lighthouse Positioning Deck**: [Bitcraze Lighthouse Positioning Deck](https://www.bitcraze.io/products/lighthouse-positioning-deck/)
+
+3. **USB-to-Serial Adapter**: Any common USB-to-serial adapter (FTDI FT232, CP2102, CH340, etc.)
+
+4. **Electronic Components** (for the adapter):
+   - Resistors: 3x 10kΩ
+   - XBee breakout board (e.g., [SparkFun BOB-08276](https://www.sparkfun.com/products/8276))
+   - Breadboard or perfboard
+   - Jumper wires and basic soldering tools
+
+## Getting Started
+
+### 1. Build the Hardware Adapter
+
+Build the USB-to-serial adapter following the instructions in the [Building the Hardware Adapter](#building-the-hardware-adapter) section below.
+
+### 2. Connect the Adapter
+
+Connect your assembled adapter to the computer via USB. The deck should appear as a serial device (e.g., `/dev/ttyUSB0` or `/dev/ttyACM0` on Linux).
+
+Verify the connection:
+```bash
+ls /dev/tty* | grep -E "(USB|ACM)"
+```
+
+### 3. Build the Docker Container
 
 Build and run the development docker container:
 
@@ -10,76 +51,66 @@ Build and run the development docker container:
 ./docker/run.sh --build
 ```
 
-Once within the docker, build the ROS 2 workspace:
+### 4. Build the ROS 2 Workspace
+
+Once inside the docker container, build the workspace:
 
 ```bash
 colcon build --symlink-install
 . install/setup.bash
 ```
 
-The node takes arguments for the serial port and the baudrate, so the best way to run it is with a launch file. A helper launch file is provided in the `launch` directory for node testing purposes:
+### 5. Run Interactive Station Mapping
+
+Launch the interactive mapper to calibrate your Lighthouse base stations:
 
 ```bash
-ros2 launch lighthouse_ros lighthouse_ros.launch.py device:=/dev/ttyACM0 baudrate:=115200
+ros2 launch lighthouse_station_mapper interactive_mapping.launch.py device:=/dev/ttyACM0
 ```
 
-The `baudrate` argument is optional and defaults to 230400. The `device` argument is mandatory.
+See the [lighthouse_station_mapper README](lighthouse_station_mapper/README.md) for detailed workflow instructions.
 
-## TL;DR guide to do a test run using the datasets in the repository
+## Building the Hardware Adapter
 
-There are two ways to test the code.
+<img src="docs/images/fancy_lighthouse_sensor.webp" alt="Example adapter with case" width="100%">
 
-#### Offline protocol parser node
+The Lighthouse deck requires a USB-to-serial adapter to interface with a computer. The adapter circuit requires voltage level shifting to protect the deck's FPGA, which operates at **3.0V logic levels**.
 
-The decoding stack can be tested using a second executable provided in the same package. This executable reads the data stream from a file and plays it through the same decoding stack as the main ROS 2 node.
+**Important:** While the deck's TX pin can safely connect to most USB-to-serial adapters, **the RX pin must be protected with a voltage divider** to prevent damage from higher voltage levels (5V or 3.3V) output by typical USB-to-serial adapters.
 
-This will only produce logging output, and is therefore useful to test the protocol parsing code offline.
+The recommended adapter circuit is shown in the wiring diagram below:
 
-To play a file through the decoding stack in this way, run the following command:
+![Serial adapter wiring diagram](docs/images/serial_schematic.webp)
 
-```bash
-ros2 run lighthouse_ros file_parser_node <path_to_file>
-```
+## Contributing
 
-For example:
+Contributions are welcome! This implementation provides a foundation with many opportunities for improvement.
 
-```bash
-ros2 run lighthouse_ros file_parser_node src/lighthouse_ros_ros2_stack/datasets/raw_frames.txt
-```
-
-See `file_parser_node.py` for more information.
-
-#### Full run of the ROS 2 node
-
-To be able to replay a recorded dataset through the main node you need to create "virtual" serial port on your system that the node can connect. Open a new terminal in your development docker container and run the following command:
-
-```bash
-socat -d -d pty,link=/tmp/vserial1,raw,echo=0 pty,link=/tmp/vserial2,raw,echo=0
-```
-
-This will create a pair of pseudo terminals, `/tmp/vserial1` and `/tmp/vserial2`.
-You can then connect the node to `/tmp/vserial1` from a second terminal using the
-helper launch file as:
-
-```bash
-ros2 launch lighthouse_ros lighthouse_ros.launch.py device:=/tmp/vserial1
-```
-
-Finally, you simply dump the dataset to the other end of the pseudo terminal pair:
-```bash
-cat src/lighthouse_ros_ros2_stack/datasets/raw_frames.txt > /tmp/vserial2
-```
-
-You can watch the output messages using `ros2 topic echo` or `ros2 topic hz` on the `/lighthouse` topic.
-```bash
-ros2 topic echo /lighthouse
-```
+Please open issues for bug reports or feature requests, and submit pull requests for improvements.
 
 ## References
 
-- [Lighthouse Positioning System: Dataset, Accuracy, and Precision for UAV Research](https://arxiv.org/abs/2104.11523), paper with description of the
- overall system.
-- [Repurposing Valve's SteamVR 2.0 Technology to Develop an Open-Source, Low-Cost Motion Capture System for Robotics](https://fosdem.org/2025/schedule/event/fosdem-2025-5013-repurposing-valve-s-steamvr-2-0-technology-to-develop-an-open-source-low-cost-motion-capture-system-for-robotics/), great talk at FOSDEM 2025 about the system.
-- [Lighthouse deck bootloader verilog code repository](https://github.com/bitcraze/lighthouse-bootloader), including the protocol to interact with the bootloader and make it boot the main firmware.
-- [Lighthouse deck firmware repository](https://github.com/bitcraze/lighthouse-fpga), including a general description of the protocol used to communicate with the deck.
-- Low-level, reverse-engineered [information about the protocol](https://github.com/nairol/LighthouseRedox/tree/master/docs).
+### Essential Reading
+
+- [Lighthouse Positioning System: Dataset, Accuracy, and Precision for UAV Research](https://arxiv.org/abs/2104.11523)
+- [Repurposing Valve's SteamVR 2.0 Technology to Develop an Open-Source, Low-Cost Motion Capture System for Robotics](https://fosdem.org/2025/schedule/event/fosdem-2025-5013-repurposing-valve-s-steamvr-2-0-technology-to-develop-an-open-source-low-cost-motion-capture-system-for-robotics/) - FOSDEM 2025 talk with low-level system details
+
+### Bitcraze Resources
+
+- [Lighthouse deck product page](https://www.bitcraze.io/products/lighthouse-positioning-deck/)
+- [Lighthouse positioning accuracy analysis](https://www.bitcraze.io/2021/05/lighthouse-positioning-accuracy/)
+- [Improved geometry estimation](https://www.bitcraze.io/2022/01/improved-lighthouse-geometry-estimation/)
+- [Lighthouse documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/functional-areas/lighthouse/)
+- [ROSCon 2024 presentation](https://roscon.ros.org/2024/talks/The_Lighthouse_project_-_from_Virtual_Reality_to_Onboard_Positioning_for_Robotics.pdf)
+
+## Acknowledgements
+
+This project builds upon extensive work by the Lighthouse community, but especial thanks to the following community members for their contributions:
+
+- **Bitcraze** for creating and open-sourcing the Lighthouse deck hardware and firmware
+- **Said Alvarado-Marin** for the excellent FOSDEM presentation and slides
+- The broader **Crazyflie and VR communities** for documentation and support
+
+## License
+
+See [LICENSE](LICENSE) for details.
