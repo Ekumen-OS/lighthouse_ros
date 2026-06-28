@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<library path="lighthouse_deck_broadcaster">
+  <class name="lighthouse_deck_broadcaster/LighthouseDeckBroadcaster"
+         type="lighthouse_deck_broadcaster::LighthouseDeckBroadcaster"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      ROS2 Control broadcaster for Lighthouse Deck hardware.
+      Publishes sensor measurements from all base stations.
+    </description>
+  </class>
+</library>
