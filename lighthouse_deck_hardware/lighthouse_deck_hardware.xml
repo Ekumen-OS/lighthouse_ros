@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<library path="lighthouse_deck_hardware">
+  <class name="lighthouse_deck_hardware/LighthouseDeckHardware"
+         type="lighthouse_deck_hardware::LighthouseDeckHardware"
+         base_class_type="hardware_interface::SensorInterface">
+    <description>
+      ROS2 Control sensor hardware interface for the Lighthouse Deck.
+      This component provides azimuth and elevation angles for multiple
+      sensors from multiple base stations (beacons).
+    </description>
+  </class>
+</library>

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>lighthouse_testbench_bringup</name>
+  <version>1.0.0</version>
+  <description>Launch files and configuration for lighthouse testbench</description>
+  <maintainer email="glpuga@ekumenlabs.com">Gerardo Puga</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>lighthouse_amcl</depend>
+  <depend>lighthouse_ros</depend>
+  <depend>lighthouse_testbench</depend>
+
+  <depend>nav2_rviz_plugins</depend>
+  <depend>rviz2</depend>
+  <depend>teleop_twist_keyboard</depend>
+  <depend>xterm</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,25 @@
+services:
+  lighthouse_ros-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: lighthouse_ros-dev
+    environment:
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=/tmp/.docker.xauth
+    stdin_open: true
+    tty: true
+    user: ${USERID:-1000}:${GROUPID:-1000}
+    privileged: true
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.docker.xauth:/tmp/.docker.xauth
+      - /dev:/dev
+      - ..:/home/developer/ws/src/lighthouse_ros_ros2_stack
+      - lighthouse_ros_persistence:/home/developer/ws/persistence
+    group_add:
+      - "dialout"
+    network_mode: host
+volumes:
+  lighthouse_ros_persistence:

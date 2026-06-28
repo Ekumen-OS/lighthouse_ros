@@ -1,0 +1,33 @@
+name: CI code linting
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  linter:
+    name: Lint sources
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/catthehacker/ubuntu:act-latest
+      options: --user 1000:1000  # matches self-hosted runner UID/GID.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          cache: pip
+
+      - name: Lint
+        run: pipx run pre-commit run --all-files --verbose --show-diff-on-failure
