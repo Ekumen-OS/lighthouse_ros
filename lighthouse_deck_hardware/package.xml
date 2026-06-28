@@ -4,7 +4,7 @@
   <name>lighthouse_deck_hardware</name>
   <version>0.1.0</version>
   <description>ROS2 Control hardware interface for Lighthouse Deck</description>
-  <maintainer email="maintainer@ekumen.com">Ekumen</maintainer>
+  <maintainer email="glpuga@ekumenlabs.com">Gerardo Puga</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
