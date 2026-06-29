@@ -213,16 +213,15 @@ void LighthouseDeckDriverNode::bearingCallback(
 
   // Publish data from a single base station
   // Each array contains one element for this base station
-  msg.station_id.push_back(
-    static_cast<int32_t>(sensor_bearings.base_station_id));
-  msg.azimuth_0.push_back(sensor_bearings.sensor_angles[0].azimuth);
-  msg.azimuth_1.push_back(sensor_bearings.sensor_angles[1].azimuth);
-  msg.azimuth_2.push_back(sensor_bearings.sensor_angles[2].azimuth);
-  msg.azimuth_3.push_back(sensor_bearings.sensor_angles[3].azimuth);
-  msg.elevation_0.push_back(sensor_bearings.sensor_angles[0].elevation);
-  msg.elevation_1.push_back(sensor_bearings.sensor_angles[1].elevation);
-  msg.elevation_2.push_back(sensor_bearings.sensor_angles[2].elevation);
-  msg.elevation_3.push_back(sensor_bearings.sensor_angles[3].elevation);
+  msg.station_id = static_cast<int32_t>(sensor_bearings.base_station_id);
+  msg.azimuth_0 = sensor_bearings.sensor_angles[0].azimuth;
+  msg.azimuth_1 = sensor_bearings.sensor_angles[1].azimuth;
+  msg.azimuth_2 = sensor_bearings.sensor_angles[2].azimuth;
+  msg.azimuth_3 = sensor_bearings.sensor_angles[3].azimuth;
+  msg.elevation_0 = sensor_bearings.sensor_angles[0].elevation;
+  msg.elevation_1 = sensor_bearings.sensor_angles[1].elevation;
+  msg.elevation_2 = sensor_bearings.sensor_angles[2].elevation;
+  msg.elevation_3 = sensor_bearings.sensor_angles[3].elevation;
 
   bearings_publisher_->publish(msg);
 }

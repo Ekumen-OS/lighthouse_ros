@@ -168,20 +168,25 @@ bool MapperUiNode::is_quit_requested() const
 void MapperUiNode::lighthouse_callback(const LighthouseDeckMeasurement::SharedPtr msg)
 {
   const rclcpp::Time timestamp{msg->header.stamp};
-  const std::size_t n = msg->station_id.size();
-  for (std::size_t i = 0; i < n; ++i) {
-    TimestampedLighthouseSample sample;
-    sample.timestamp = timestamp;
-    sample.sample.station_id = static_cast<StationId>(msg->station_id[i]);
-    // Convert from degrees (message) to radians (solver API)
-    sample.sample.azimuth = {
-      msg->azimuth_0[i] * kDegToRad, msg->azimuth_1[i] * kDegToRad,
-      msg->azimuth_2[i] * kDegToRad, msg->azimuth_3[i] * kDegToRad};
-    sample.sample.elevation = {
-      msg->elevation_0[i] * kDegToRad, msg->elevation_1[i] * kDegToRad,
-      msg->elevation_2[i] * kDegToRad, msg->elevation_3[i] * kDegToRad};
-    sample_queue_.push_back(std::move(sample));
-  }
+
+  TimestampedLighthouseSample sample;
+  sample.timestamp = timestamp;
+  sample.sample.station_id = static_cast<StationId>(msg->station_id);
+
+  // Convert from degrees (message) to radians (solver API)
+  sample.sample.azimuth = {
+    msg->azimuth_0 * kDegToRad,
+    msg->azimuth_1 * kDegToRad,
+    msg->azimuth_2 * kDegToRad,
+    msg->azimuth_3 * kDegToRad};
+  sample.sample.elevation = {
+    msg->elevation_0 * kDegToRad,
+    msg->elevation_1 * kDegToRad,
+    msg->elevation_2 * kDegToRad,
+    msg->elevation_3 * kDegToRad};
+
+  sample_queue_.push_back(std::move(sample));
+
   prune_old_samples();
 }
 

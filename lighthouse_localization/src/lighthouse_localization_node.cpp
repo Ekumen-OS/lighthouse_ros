@@ -80,30 +80,26 @@ void LighthouseLocalizationNode::lighthouse_callback(
   }
 
   constexpr double kDegToRad = M_PI / 180.0;
-  const std::size_t n = msg->station_id.size();
   const rclcpp::Time current_time(msg->header.stamp);
 
-  // Add new samples to the buffer
-  for (std::size_t i = 0; i < n; ++i) {
-    lighthouse_geometry_utils::DeckPoseOptimization::Sample sample;
-    sample.station_id = static_cast<lighthouse_geometry_utils::StationId>(msg->station_id[i]);
+  lighthouse_geometry_utils::DeckPoseOptimization::Sample sample;
+  sample.station_id = static_cast<lighthouse_geometry_utils::StationId>(msg->station_id);
 
-    // Convert from degrees (message) to radians (solver API)
-    sample.azimuths = {
-      msg->azimuth_0[i] * kDegToRad,
-      msg->azimuth_1[i] * kDegToRad,
-      msg->azimuth_2[i] * kDegToRad,
-      msg->azimuth_3[i] * kDegToRad
-    };
-    sample.elevations = {
-      msg->elevation_0[i] * kDegToRad,
-      msg->elevation_1[i] * kDegToRad,
-      msg->elevation_2[i] * kDegToRad,
-      msg->elevation_3[i] * kDegToRad
-    };
+  // Convert from degrees (message) to radians (solver API)
+  sample.azimuths = {
+    msg->azimuth_0 * kDegToRad,
+    msg->azimuth_1 * kDegToRad,
+    msg->azimuth_2 * kDegToRad,
+    msg->azimuth_3 * kDegToRad
+  };
+  sample.elevations = {
+    msg->elevation_0 * kDegToRad,
+    msg->elevation_1 * kDegToRad,
+    msg->elevation_2 * kDegToRad,
+    msg->elevation_3 * kDegToRad
+  };
 
-    sample_buffer_.push_back({current_time, sample});
-  }
+  sample_buffer_.push_back({current_time, sample});
 
   // Remove samples older than time_tolerance_ from the front of the buffer
   const rclcpp::Duration tolerance{std::chrono::duration<double>(time_tolerance_)};
@@ -121,7 +117,7 @@ void LighthouseLocalizationNode::lighthouse_callback(
   const double min_solve_interval = 1.0 / max_solver_rate_;
   const rclcpp::Duration time_since_last_solve = current_time - latest_solver_execution_;
   if (time_since_last_solve.seconds() < min_solve_interval) {
-    return;  // Rate limit: skip solver execution
+    return;
   }
 
   // Create optimizer with known station poses
