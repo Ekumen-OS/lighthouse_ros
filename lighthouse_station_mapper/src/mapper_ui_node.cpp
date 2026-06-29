@@ -56,7 +56,6 @@ namespace lighthouse_station_mapper
 
 namespace
 {
-constexpr double kDegToRad = M_PI / 180.0;
 constexpr double kRadToDeg = 180.0 / M_PI;
 }  // namespace
 
@@ -173,17 +172,16 @@ void MapperUiNode::lighthouse_callback(const LighthouseDeckMeasurement::SharedPt
   sample.timestamp = timestamp;
   sample.sample.station_id = static_cast<StationId>(msg->station_id);
 
-  // Convert from degrees (message) to radians (solver API)
   sample.sample.azimuth = {
-    msg->azimuth_0 * kDegToRad,
-    msg->azimuth_1 * kDegToRad,
-    msg->azimuth_2 * kDegToRad,
-    msg->azimuth_3 * kDegToRad};
+    msg->azimuth_0,
+    msg->azimuth_1,
+    msg->azimuth_2,
+    msg->azimuth_3};
   sample.sample.elevation = {
-    msg->elevation_0 * kDegToRad,
-    msg->elevation_1 * kDegToRad,
-    msg->elevation_2 * kDegToRad,
-    msg->elevation_3 * kDegToRad};
+    msg->elevation_0,
+    msg->elevation_1,
+    msg->elevation_2,
+    msg->elevation_3};
 
   sample_queue_.push_back(std::move(sample));
 

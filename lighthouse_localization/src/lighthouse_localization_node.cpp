@@ -79,24 +79,22 @@ void LighthouseLocalizationNode::lighthouse_callback(
     return;
   }
 
-  constexpr double kDegToRad = M_PI / 180.0;
   const rclcpp::Time current_time(msg->header.stamp);
 
   lighthouse_geometry_utils::DeckPoseOptimization::Sample sample;
   sample.station_id = static_cast<lighthouse_geometry_utils::StationId>(msg->station_id);
 
-  // Convert from degrees (message) to radians (solver API)
   sample.azimuths = {
-    msg->azimuth_0 * kDegToRad,
-    msg->azimuth_1 * kDegToRad,
-    msg->azimuth_2 * kDegToRad,
-    msg->azimuth_3 * kDegToRad
+    msg->azimuth_0,
+    msg->azimuth_1,
+    msg->azimuth_2,
+    msg->azimuth_3
   };
   sample.elevations = {
-    msg->elevation_0 * kDegToRad,
-    msg->elevation_1 * kDegToRad,
-    msg->elevation_2 * kDegToRad,
-    msg->elevation_3 * kDegToRad
+    msg->elevation_0,
+    msg->elevation_1,
+    msg->elevation_2,
+    msg->elevation_3
   };
 
   sample_buffer_.push_back({current_time, sample});
