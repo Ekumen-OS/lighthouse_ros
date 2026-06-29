@@ -8,14 +8,13 @@ std_msgs/Header header
 # Identifies which base station the measurement came from
 int32 station_id
 
-# Azimuth angles for sensors 0-3 (degrees)
-
+# Azimuth angles for sensors 0-3, values in radians
 float64 azimuth_0
 float64 azimuth_1
 float64 azimuth_2
 float64 azimuth_3
 
-# Elevation angles for sensors 0-3 (degrees)
+# Elevation angles for sensors 0-3, values in radians
 float64 elevation_0
 float64 elevation_1
 float64 elevation_2

@@ -20,6 +20,8 @@
 #include <sstream>
 #include <thread>
 
+#include <cmath>
+
 #include <lighthouse_deck_msgs/msg/lighthouse_deck_measurement.hpp>
 #include <rclcpp/qos.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -213,15 +215,19 @@ void LighthouseDeckDriverNode::bearingCallback(
 
   // Publish data from a single base station
   // Each array contains one element for this base station
+  // convert the angles from degrees to radians for the message
+
+  const auto kDegToRad = M_PI / 180.0;
+
   msg.station_id = static_cast<int32_t>(sensor_bearings.base_station_id);
-  msg.azimuth_0 = sensor_bearings.sensor_angles[0].azimuth;
-  msg.azimuth_1 = sensor_bearings.sensor_angles[1].azimuth;
-  msg.azimuth_2 = sensor_bearings.sensor_angles[2].azimuth;
-  msg.azimuth_3 = sensor_bearings.sensor_angles[3].azimuth;
-  msg.elevation_0 = sensor_bearings.sensor_angles[0].elevation;
-  msg.elevation_1 = sensor_bearings.sensor_angles[1].elevation;
-  msg.elevation_2 = sensor_bearings.sensor_angles[2].elevation;
-  msg.elevation_3 = sensor_bearings.sensor_angles[3].elevation;
+  msg.azimuth_0 = sensor_bearings.sensor_angles[0].azimuth * kDegToRad;
+  msg.azimuth_1 = sensor_bearings.sensor_angles[1].azimuth * kDegToRad;
+  msg.azimuth_2 = sensor_bearings.sensor_angles[2].azimuth * kDegToRad;
+  msg.azimuth_3 = sensor_bearings.sensor_angles[3].azimuth * kDegToRad;
+  msg.elevation_0 = sensor_bearings.sensor_angles[0].elevation * kDegToRad;
+  msg.elevation_1 = sensor_bearings.sensor_angles[1].elevation * kDegToRad;
+  msg.elevation_2 = sensor_bearings.sensor_angles[2].elevation * kDegToRad;
+  msg.elevation_3 = sensor_bearings.sensor_angles[3].elevation * kDegToRad;
 
   bearings_publisher_->publish(msg);
 }
