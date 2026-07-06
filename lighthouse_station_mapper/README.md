@@ -37,3 +37,48 @@ https://github.com/user-attachments/assets/1d2d9ecf-f871-4dcb-8961-9a4889b39a24
 - **Save map** - Write the current station geometry to a CSV file
 - **Clear samples** (or 'c') - Delete all samples and reset the solution
 - **Quit** (or 'q') - Exit the mapper
+
+## Published Topics
+
+- **`mapper_station_markers`** (`visualization_msgs/msg/MarkerArray`)
+  - RViz visualization markers showing the solved base station poses
+  - Published with transient_local QoS for late-joining subscribers
+
+- **`mapper_deck_pose_samples`** (`visualization_msgs/msg/MarkerArray`)
+  - RViz visualization markers showing the deck positions where samples were captured
+  - Helps visualize the spatial distribution of calibration data
+
+- **`mapper_deck_pose`** (`geometry_msgs/msg/PoseStamped`)
+  - Current estimated deck pose during the sampling process
+  - Published at 10 Hz when the deck is in view of stations
+
+## Subscribed Topics
+
+- **`lighthouse`** (`lighthouse_deck_msgs/msg/LighthouseDeckMeasurement`)
+  - Raw angle measurements from the lighthouse deck driver
+  - Used to collect calibration samples and compute station geometry
+
+## Service Clients
+
+- **`set_station_poses`** (`lighthouse_station_mapper_msgs/srv/SetStationPoses`)
+  - Called when the "Update map node" button is pressed
+  - Sends the solved station poses to the lighthouse_localization node
+
+## Parameters
+
+- **`max_angular_spread`** (double, default: `5e-3`)
+  - Maximum angular spread (in radians) allowed for measurements to be considered stable
+  - Lower values require more stable/static deck positioning before sampling
+  - Used to determine "READY TO SAMPLE" status
+
+- **`buffer_duration`** (double, default: `1.0`)
+  - Duration (in seconds) to buffer incoming measurements
+  - Longer buffers provide more data for stability checks but increase latency
+
+- **`min_samples_per_station`** (int, default: `3`)
+  - Minimum number of deck pose samples required per station before solving is possible
+  - More samples generally improve calibration accuracy
+
+- **`lighthouse_frame`** (string, default: `"lighthouse"`)
+  - Frame ID for the lighthouse coordinate system
+  - Used in visualization markers and TF broadcasts

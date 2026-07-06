@@ -70,6 +70,45 @@ ros2 launch lighthouse_station_mapper interactive_mapping.launch.py device:=/dev
 
 See the [lighthouse_station_mapper README](lighthouse_station_mapper/README.md) for detailed workflow instructions.
 
+## ROS 2 Nodes
+
+This repository provides three main ROS 2 nodes that work together to enable lighthouse-based tracking:
+
+### lighthouse_deck_driver
+
+The driver node interfaces with the Lighthouse Positioning Deck hardware via USB-to-serial connection. It handles the low-level protocol decoding and publishes raw angle measurements from the deck's sensors.
+
+**Key features:**
+- Communicates with the deck's FPGA over serial
+- Decodes binary lighthouse protocol
+- Publishes raw azimuth/elevation measurements for each base station
+
+See the [lighthouse_deck_driver README](lighthouse_deck_driver/README.md) for detailed node documentation, including published topics, parameters, and usage examples.
+
+### lighthouse_station_mapper
+
+An interactive terminal-based calibration tool that computes the 3D geometry of your lighthouse base stations. You move the deck to multiple positions while the tool collects measurements and solves for station poses using nonlinear optimization.
+
+**Key features:**
+- Interactive TUI for guided calibration workflow
+- Real-time RViz visualization of stations and sample positions
+- Exports calibrated station geometry to CSV
+- Sends station poses to the localization node
+
+See the [lighthouse_station_mapper README](lighthouse_station_mapper/README.md) for detailed node documentation, including the calibration workflow, topics, and parameters.
+
+### lighthouse_localization
+
+The localization node computes real-time 6-DOF pose estimates of the lighthouse deck using the calibrated station geometry. Once the stations are mapped, this node provides continuous pose tracking at high rates with low latency.
+
+**Key features:**
+- Real-time pose optimization using Ceres Solver
+- Configurable solver rate and time synchronization
+- Loads pre-calibrated station maps from file
+- Service interface for dynamic station pose updates
+
+See the [lighthouse_localization README](lighthouse_localization/README.md) for detailed node documentation, including subscribed/published topics, services, and parameters.
+
 ## Building the Hardware Adapter
 
 <img src="docs/images/fancy_lighthouse_sensor.webp" alt="Example adapter with case" width="100%">
