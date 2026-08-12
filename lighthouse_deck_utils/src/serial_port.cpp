@@ -105,21 +105,23 @@ bool SerialPort::setConfiguration(const PortConfiguration & config)
 
 bool SerialPort::send(const uint8_t * data, std::size_t size)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
-
-  if (!internalIsOpen()) {
-    return false;
-  }
-
   auto promise = std::make_shared<std::promise<std::error_code>>();
   auto future = promise->get_future();
 
-  asio::async_write(
-    *serial_port_, asio::buffer(data, size),
-    [promise](const std::error_code & error, std::size_t bytes_transferred) {
-      (void)bytes_transferred;
-      promise->set_value(error);
-    });
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (!internalIsOpen()) {
+      return false;
+    }
+
+    asio::async_write(
+      *serial_port_, asio::buffer(data, size),
+      [promise](const std::error_code & error, std::size_t bytes_transferred) {
+        (void)bytes_transferred;
+        promise->set_value(error);
+      });
+  }
 
   std::error_code error = future.get();  // block until done
   return !error;
