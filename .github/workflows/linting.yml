@@ -16,10 +16,7 @@ concurrency:
 jobs:
   linter:
     name: Lint sources
-    runs-on: self-hosted
-    container:
-      image: ghcr.io/catthehacker/ubuntu:act-latest
-      options: --user 1000:1000  # matches self-hosted runner UID/GID.
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

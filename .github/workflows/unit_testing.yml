@@ -17,7 +17,7 @@ env:
   ROS_DOMAIN_ID: 88
 jobs:
   ci-tests:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
